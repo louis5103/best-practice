@@ -1,152 +1,67 @@
-import { 
-  Injectable, 
-  UnauthorizedException, 
-  BadRequestException,
+import {
+  Injectable,
+  UnauthorizedException,
   ConflictException,
-  Logger
+  BadRequestException,
+  Logger,
 } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { RedisService } from '@liaoliaots/nestjs-redis';
-
+import * as bcrypt from 'bcrypt';
 import { User } from '../../database/entities/user.entity';
-import { 
-  LoginDto, 
-  RegisterDto, 
-  AuthResponseDto, 
-  RegisterResponseDto,
-  UserInfoDto 
-} from './dto';
 
 /**
  * 인증 서비스입니다.
  * 
- * 이 서비스는 마치 은행의 보안팀과 같은 역할을 합니다.
- * 고객(사용자)의 신원을 확인하고, 계좌(계정)를 개설하며,
- * 안전한 거래(API 접근)를 위한 인증서(JWT 토큰)를 발급합니다.
+ * 이 서비스는 마치 은행의 계좌 담당자와 같은 역할을 합니다.
+ * 고객(사용자)이 계좌 개설(회원가입), 신원 확인(로그인), 계좌 해지(로그아웃) 등의
+ * 요청을 할 때 필요한 모든 업무를 처리하는 핵심 서비스입니다.
  * 
- * 모든 보안 관련 비즈니스 로직이 이곳에 집중되어 있어
- * 일관된 보안 정책을 적용할 수 있습니다.
+ * Spring Boot의 Service 클래스와 동일한 개념으로,
+ * 컨트롤러에서 받은 요청을 실제 비즈니스 로직으로 처리하고,
+ * 데이터베이스와 상호작용하며, 결과를 반환하는 역할을 담당합니다.
+ * 
+ * 이 서비스에서 처리하는 주요 기능들:
+ * - 사용자 회원가입 (비밀번호 해시화, 중복 확인)
+ * - 사용자 로그인 (비밀번호 검증, JWT 토큰 발급)
+ * - 로그아웃 (토큰 블랙리스트 처리)
+ * - 사용자 정보 조회 및 검증
  */
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
+  
+  // Redis 클라이언트를 미리 가져와서 성능을 향상시킵니다.
+  // 매번 getOrThrow()를 호출하는 것보다 효율적입니다.
+  private readonly redis = this.redisService.getOrThrow();
 
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-    private readonly redisService: RedisService
+    private readonly redisService: RedisService,
   ) {}
-
-  /**
-   * 사용자 로그인을 처리합니다.
-   * 
-   * 이 메서드는 마치 은행 창구에서 신분증과 도장을 확인하는 과정과 같습니다.
-   * 이메일과 비밀번호를 확인한 후, 모든 것이 정확하다면
-   * 은행 업무를 위한 임시 신분증(JWT 토큰)을 발급합니다.
-   * 
-   * @param loginDto 로그인 요청 정보
-   * @returns AuthResponseDto 인증 성공 응답
-   */
-  async login(loginDto: LoginDto): Promise<AuthResponseDto> {
-    const { email, password } = loginDto;
-
-    try {
-      // 1. 이메일로 사용자 찾기
-      // 비밀번호 비교를 위해 password 필드도 함께 조회해야 합니다.
-      // (기본적으로는 보안상 password가 select에서 제외될 수 있음)
-      const user = await this.userRepository
-        .createQueryBuilder('user')
-        .addSelect('user.password')
-        .where('user.email = :email', { email })
-        .getOne();
-
-      if (!user) {
-        this.logger.warn(`로그인 실패 - 존재하지 않는 이메일: ${email}`);
-        throw new UnauthorizedException('이메일 또는 비밀번호가 올바르지 않습니다.');
-      }
-
-      // 2. 계정 상태 확인
-      if (!user.isActive) {
-        this.logger.warn(`로그인 실패 - 비활성화된 계정: ${email}`);
-        throw new UnauthorizedException('비활성화된 계정입니다. 관리자에게 문의하세요.');
-      }
-
-      // 3. 비밀번호 검증
-      // User 엔티티의 validatePassword 메서드를 활용합니다.
-      const isPasswordValid = await user.validatePassword(password);
-      
-      if (!isPasswordValid) {
-        this.logger.warn(`로그인 실패 - 잘못된 비밀번호: ${email}`);
-        throw new UnauthorizedException('이메일 또는 비밀번호가 올바르지 않습니다.');
-      }
-
-      // 4. JWT 토큰 생성
-      const payload = {
-        sub: user.id,          // JWT 표준: subject (사용자 ID)
-        email: user.email,
-        role: user.role,
-        iat: Math.floor(Date.now() / 1000), // issued at
-      };
-
-      const accessToken = await this.jwtService.signAsync(payload);
-
-      // 5. 마지막 로그인 시간 업데이트
-      await this.userRepository.update(user.id, {
-        lastLoginAt: new Date()
-      });
-
-      // 6. 로그인 성공 로그
-      this.logger.log(`로그인 성공: ${email} (ID: ${user.id})`);
-
-      // 7. 응답 데이터 구성
-      return {
-        accessToken,
-        tokenType: 'Bearer',
-        expiresIn: this.getTokenExpirationSeconds(),
-        user: this.transformToUserInfo(user),
-        message: '로그인에 성공했습니다.',
-        timestamp: new Date().toISOString()
-      };
-
-    } catch (error) {
-      // 이미 처리된 예외는 그대로 재throw
-      if (error instanceof UnauthorizedException) {
-        throw error;
-      }
-
-      // 예상치 못한 오류는 로그를 남기고 일반적인 메시지 반환
-      this.logger.error(`로그인 처리 중 오류 발생: ${error.message}`, error.stack);
-      throw new UnauthorizedException('로그인 처리 중 오류가 발생했습니다.');
-    }
-  }
 
   /**
    * 새로운 사용자를 등록합니다.
    * 
    * 이 메서드는 마치 은행에서 새 계좌를 개설하는 과정과 같습니다.
-   * 필요한 서류(정보)를 모두 확인하고, 중복 계좌가 없는지 검사한 후,
-   * 새로운 계좌(사용자 계정)를 안전하게 생성합니다.
-   * 
-   * @param registerDto 회원가입 요청 정보
-   * @returns RegisterResponseDto 회원가입 성공 응답
+   * 고객의 신원을 확인하고, 중복된 계좌가 없는지 체크하며,
+   * 모든 절차가 완료되면 계좌(사용자 계정)을 생성합니다.
    */
-  async register(registerDto: RegisterDto): Promise<RegisterResponseDto> {
-    const { email, name, password, passwordConfirm, role } = registerDto;
+  async register(registerDto: any) {
+    const { email, password, name, role = 'user' } = registerDto;
 
     try {
-      // 1. 비밀번호 확인 검증
-      if (password !== passwordConfirm) {
-        throw new BadRequestException('비밀번호와 비밀번호 확인이 일치하지 않습니다.');
-      }
-
-      // 2. 이메일 중복 체크
+      // 1단계: 이메일 중복 확인
+      // 이미 사용 중인 이메일인지 확인합니다.
+      // 이는 은행에서 동일한 주민등록번호로 여러 계좌를 만들 수 없는 것과 같습니다.
       const existingUser = await this.userRepository.findOne({
-        where: { email }
+        where: { email },
       });
 
       if (existingUser) {
@@ -154,165 +69,196 @@ export class AuthService {
         throw new ConflictException('이미 사용 중인 이메일 주소입니다.');
       }
 
-      // 3. 새로운 사용자 엔티티 생성
+      // 2단계: 비밀번호 해시화
+      // 비밀번호를 평문으로 저장하는 것은 매우 위험하므로,
+      // bcrypt를 사용해서 안전하게 해시화합니다.
+      // 해시화 라운드 수는 보안과 성능의 균형을 고려해서 설정합니다.
+      const saltRounds = this.configService.get<number>('BCRYPT_ROUNDS') || 12;
+      const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+      // 3단계: 새 사용자 생성
       const newUser = this.userRepository.create({
         email,
+        password: hashedPassword,
         name,
-        password, // 비밀번호는 엔티티의 @BeforeInsert 훅에서 자동 해시화됩니다
-        role: role || 'user',
+        role,
         isActive: true,
-        isEmailVerified: false // 이메일 인증은 별도 프로세스에서 처리
+        isEmailVerified: false, // 이메일 인증은 별도 과정에서 처리
+        createdAt: new Date(),
+        updatedAt: new Date(),
       });
 
-      // 4. 데이터베이스에 저장
+      // 4단계: 데이터베이스에 저장
       const savedUser = await this.userRepository.save(newUser);
 
-      // 5. 회원가입 성공 로그
-      this.logger.log(`회원가입 성공: ${email} (ID: ${savedUser.id})`);
+      // 5단계: JWT 토큰 생성
+      // 회원가입과 동시에 로그인 처리를 위해 토큰을 발급합니다.
+      const token = await this.generateJwtToken(savedUser);
 
-      // 6. 응답 데이터 구성 (비밀번호는 제외)
+      this.logger.log(`새 사용자 등록 완료: ${email} (ID: ${savedUser.id})`);
+
+      // 비밀번호는 절대 응답에 포함하지 않습니다.
+      const { password: _, ...userWithoutPassword } = savedUser;
+
       return {
         message: '회원가입이 완료되었습니다.',
-        user: this.transformToUserInfo(savedUser),
-        nextStep: '로그인하여 서비스를 이용해 주세요.',
-        timestamp: new Date().toISOString()
+        user: userWithoutPassword,
+        token,
       };
-
-      // TODO: 이메일 인증 메일 발송 로직 추가 가능
-
     } catch (error) {
-      // 이미 처리된 예외는 그대로 재throw
-      if (error instanceof BadRequestException || error instanceof ConflictException) {
+      if (error instanceof ConflictException) {
         throw error;
       }
-
-      // 예상치 못한 오류 처리
-      this.logger.error(`회원가입 처리 중 오류 발생: ${error.message}`, error.stack);
-      throw new BadRequestException('회원가입 처리 중 오류가 발생했습니다.');
+      
+      this.logger.error(`회원가입 중 오류 발생: ${error.message}`, error.stack);
+      throw new BadRequestException('회원가입 중 오류가 발생했습니다.');
     }
   }
 
   /**
-   * JWT 토큰을 검증하고 사용자 정보를 반환합니다.
+   * 사용자 로그인을 처리합니다.
    * 
-   * 이 메서드는 마치 출입 카드를 스캔하여 유효성을 확인하는 것과 같습니다.
-   * 토큰이 위조되지 않았는지, 만료되지 않았는지 확인하고,
-   * 유효하다면 해당 사용자의 정보를 제공합니다.
-   * 
-   * @param token JWT 토큰
-   * @returns User 사용자 엔티티
+   * 이 메서드는 마치 은행에서 본인 확인을 하는 과정과 같습니다.
+   * 신분증(이메일)과 서명(비밀번호)을 확인해서
+   * 본인이 맞으면 거래(서비스 이용) 권한을 부여합니다.
    */
-  async validateToken(token: string): Promise<User> {
+  async login(loginDto: any) {
+    const { email, password } = loginDto;
+
     try {
-      // JWT 토큰 검증 및 디코딩
-      const payload = await this.jwtService.verifyAsync(token);
-      
-      // 토큰에서 추출한 사용자 ID로 사용자 정보 조회
+      // 1단계: 사용자 조회
+      // 입력된 이메일로 사용자를 찾습니다.
+      // 이때 비밀번호도 함께 조회해야 비교할 수 있습니다.
       const user = await this.userRepository.findOne({
-        where: { id: payload.sub }
+        where: { email },
+        select: ['id', 'email', 'password', 'name', 'role', 'isActive', 'isEmailVerified'],
       });
 
+      // 2단계: 사용자 존재 확인
       if (!user) {
-        throw new UnauthorizedException('토큰에 해당하는 사용자를 찾을 수 없습니다.');
+        this.logger.warn(`로그인 실패 - 존재하지 않는 이메일: ${email}`);
+        throw new UnauthorizedException('이메일 또는 비밀번호가 올바르지 않습니다.');
       }
 
+      // 3단계: 계정 상태 확인
       if (!user.isActive) {
+        this.logger.warn(`로그인 실패 - 비활성화된 계정: ${email}`);
         throw new UnauthorizedException('비활성화된 계정입니다.');
       }
 
-      return user;
+      // 4단계: 비밀번호 검증
+      // bcrypt.compare를 사용해서 평문 비밀번호와 해시된 비밀번호를 비교합니다.
+      // 이 함수는 내부적으로 동일한 salt를 사용해서 해시를 만들어 비교합니다.
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      
+      if (!isPasswordValid) {
+        this.logger.warn(`로그인 실패 - 잘못된 비밀번호: ${email}`);
+        throw new UnauthorizedException('이메일 또는 비밀번호가 올바르지 않습니다.');
+      }
 
+      // 5단계: 마지막 로그인 시간 업데이트
+      // 사용자의 활동을 추적하고 보안 모니터링에 도움이 됩니다.
+      user.lastLoginAt = new Date();
+      await this.userRepository.save(user);
+
+      // 6단계: JWT 토큰 생성
+      const token = await this.generateJwtToken(user);
+
+      this.logger.log(`로그인 성공: ${email} (ID: ${user.id})`);
+
+      // 비밀번호는 절대 응답에 포함하지 않습니다.
+      const { password: _, ...userWithoutPassword } = user;
+
+      return {
+        message: '로그인이 완료되었습니다.',
+        user: userWithoutPassword,
+        token,
+      };
     } catch (error) {
       if (error instanceof UnauthorizedException) {
         throw error;
       }
       
-      this.logger.error(`토큰 검증 중 오류 발생: ${error.message}`);
-      throw new UnauthorizedException('유효하지 않은 토큰입니다.');
+      this.logger.error(`로그인 중 오류 발생: ${error.message}`, error.stack);
+      throw new BadRequestException('로그인 중 오류가 발생했습니다.');
     }
   }
 
   /**
-   * 로그아웃을 처리합니다.
+   * 사용자 로그아웃을 처리합니다.
    * 
-   * JWT는 stateless하므로 서버에서 토큰을 무효화할 수 없습니다.
-   * 대신 블랙리스트를 사용하여 해당 토큰의 사용을 차단합니다.
-   * 이는 마치 분실 신고된 카드를 블랙리스트에 등록하는 것과 같습니다.
-   * 
-   * @param token 로그아웃할 JWT 토큰
+   * JWT는 기본적으로 stateless하므로 서버에서 토큰을 무효화할 방법이 없습니다.
+   * 하지만 보안상 로그아웃 시 토큰을 즉시 무효화해야 하는 경우가 있으므로,
+   * Redis를 활용한 토큰 블랙리스트 방식을 사용합니다.
    */
-  async logout(token: string): Promise<{ message: string; timestamp: string }> {
+  async logout(token: string) {
     try {
-      // 토큰을 디코딩하여 만료 시간 확인
-      const payload = await this.jwtService.verifyAsync(token);
-      const expiresAt = payload.exp * 1000; // 초를 밀리초로 변환
-      const now = Date.now();
+      // JWT 토큰을 디코드해서 만료 시간을 확인합니다.
+      const decoded = this.jwtService.decode(token) as any;
       
-      // 토큰이 아직 유효한 경우에만 블랙리스트에 추가
-      if (expiresAt > now) {
-        const redis = this.redisService.getOrThrow();
-        const remainingTime = Math.floor((expiresAt - now) / 1000); // 초 단위
+      if (decoded && decoded.exp) {
+        // 토큰의 남은 수명만큼 Redis에 저장합니다.
+        // 토큰이 만료되면 자동으로 Redis에서도 삭제됩니다.
+        const ttl = decoded.exp - Math.floor(Date.now() / 1000);
         
-        // Redis에 블랙리스트로 등록 (토큰 만료 시간까지)
-        await redis.setex(`blacklist:${token}`, remainingTime, 'true');
-        
-        this.logger.log(`토큰 블랙리스트 등록: 사용자 ID ${payload.sub}`);
+        if (ttl > 0) {
+          await this.redis.setex(`blacklist:${token}`, ttl, '1');
+          this.logger.log('토큰이 블랙리스트에 추가되었습니다.');
+        }
       }
 
       return {
-        message: '성공적으로 로그아웃되었습니다.',
-        timestamp: new Date().toISOString()
+        message: '로그아웃이 완료되었습니다.',
       };
-
     } catch (error) {
-      this.logger.error(`로그아웃 처리 중 오류 발생: ${error.message}`, error.stack);
-      // 로그아웃은 실패하더라도 클라이언트에서는 성공으로 처리하는 것이 UX상 좋습니다
-      return {
-        message: '로그아웃 처리가 완료되었습니다.',
-        timestamp: new Date().toISOString()
-      };
+      this.logger.error(`로그아웃 중 오류 발생: ${error.message}`, error.stack);
+      throw new BadRequestException('로그아웃 중 오류가 발생했습니다.');
     }
   }
 
   /**
-   * User 엔티티를 UserInfoDto로 변환합니다.
+   * JWT 토큰을 생성합니다.
    * 
-   * 이 메서드는 민감한 정보를 제거하고 클라이언트에게
-   * 안전한 사용자 정보만을 제공하는 역할을 합니다.
-   * 
-   * @param user User 엔티티
-   * @returns UserInfoDto 안전한 사용자 정보
+   * 이 메서드는 사용자의 신원을 디지털 서명이 담긴 토큰으로 변환하는 과정입니다.
+   * 마치 은행에서 거래 시 사용할 수 있는 임시 증명서를 발급하는 것과 같습니다.
    */
-  private transformToUserInfo(user: User): UserInfoDto {
-    return {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-      isActive: user.isActive,
-      isEmailVerified: user.isEmailVerified,
-      createdAt: user.createdAt
+  private async generateJwtToken(user: User): Promise<string> {
+    // JWT payload에 포함할 정보를 정의합니다.
+    // 보안상 민감한 정보(비밀번호 등)는 절대 포함하지 않습니다.
+    const payload = {
+      sub: user.id,           // subject: 토큰의 주체 (사용자 ID)
+      email: user.email,      // 사용자 이메일
+      role: user.role,        // 사용자 권한
+      iat: Math.floor(Date.now() / 1000), // issued at: 발급 시간
     };
+
+    // JWT 서비스를 사용해서 토큰을 생성합니다.
+    // 서명에 사용될 비밀키와 만료시간은 환경변수에서 가져옵니다.
+    return this.jwtService.signAsync(payload);
   }
 
   /**
-   * JWT 토큰의 만료 시간을 초 단위로 반환합니다.
+   * 현재 로그인한 사용자의 정보를 조회합니다.
    * 
-   * @returns number 토큰 만료 시간 (초)
+   * 이 메서드는 JWT Guard를 통과한 요청에서 사용자 정보를 반환합니다.
+   * 프론트엔드에서 "내 정보" 페이지를 구성할 때 유용합니다.
    */
-  private getTokenExpirationSeconds(): number {
-    const expiresIn = this.configService.get<string>('JWT_EXPIRES_IN', '24h');
-    
-    // 시간 문자열을 초로 변환 (간단한 구현)
-    if (expiresIn.endsWith('h')) {
-      return parseInt(expiresIn) * 3600;
-    } else if (expiresIn.endsWith('d')) {
-      return parseInt(expiresIn) * 86400;
-    } else if (expiresIn.endsWith('m')) {
-      return parseInt(expiresIn) * 60;
+  async getProfile(userId: number) {
+    try {
+      const user = await this.userRepository.findOne({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        throw new UnauthorizedException('사용자를 찾을 수 없습니다.');
+      }
+
+      // 비밀번호는 절대 반환하지 않습니다.
+      const { password, ...userWithoutPassword } = user;
+      return userWithoutPassword;
+    } catch (error) {
+      this.logger.error(`프로필 조회 중 오류 발생: ${error.message}`, error.stack);
+      throw new BadRequestException('프로필 조회 중 오류가 발생했습니다.');
     }
-    
-    // 기본값: 24시간
-    return 86400;
   }
 }

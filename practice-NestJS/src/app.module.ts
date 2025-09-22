@@ -9,6 +9,7 @@ import { AppService } from './app.service';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { ProductsModule } from './modules/products/products.module';
+import { validateEnvironmentVariables } from '@config/env-validation.schema';
 
 /**
  * 애플리케이션의 루트 모듈입니다.
@@ -24,8 +25,10 @@ import { ProductsModule } from './modules/products/products.module';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
-      // 환경 변수 검증을 위한 스키마를 추가할 수 있습니다 (선택사항)
-      // validationSchema: Joi.object({...}),
+      // ✅ 환경 변수 검증 활성화 - 애플리케이션 시작 시 모든 필수 환경 변수 검증
+      validate: validateEnvironmentVariables,
+      // 환경 변수 값을 캐시하여 성능 향상 (개발 환경에서는 false로 설정 가능)
+      cache: process.env.NODE_ENV === 'production',
     }),
 
     // TypeORM 데이터베이스 연결 설정
