@@ -1,0 +1,19 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="NestJS Debug" type="NodeJSConfigurationType" path-to-js-file="$PROJECT_DIR$/dist/main.js" working-dir="$PROJECT_DIR$">
+    <envs>
+      <env name="NODE_ENV" value="development" />
+    </envs>
+    <EXTENSION ID="com.jetbrains.nodejs.debug.NodeJSDebugProgra    <EXTENSION ID="com.jv="2">
+                           igurationTask" enabled="true" run_configuration_name="build" run_configura                           igurationTask"ethod>
+                                                                                                                                                      tjs << 'EOF'
+{
+  "type": "nestjs",
+  "version": "10.x",
+  "framework": "express",
+  "database": "postgresql",
+  "orm": "typeorm",
+  "cache": "redis",
+  "auth": "jwt",
+  "testing": "jest",
+  "documentation": "swagger"
+}

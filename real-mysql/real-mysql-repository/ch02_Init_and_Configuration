@@ -1,0 +1,2 @@
+docker exec -it real-mysql-db mysql -uroot -p --host=localhost --socket=/tmp/mysql.sock
+docker exec -it real-mysql-db mysql -uroot -p --host=127.0.0.1 --port=3306

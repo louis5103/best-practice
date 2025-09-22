@@ -1,0 +1,11 @@
+{
+  "type": "nestjs",
+  "version": "10.x",
+  "framework": "express",
+  "database": "postgresql",
+  "orm": "typeorm",
+  "cache": "redis",
+  "auth": "jwt",
+  "testing": "jest",
+  "documentation": "swagger"
+}

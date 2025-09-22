@@ -1,0 +1,53 @@
+version: '3.8'
+
+# 기본 개발 환경용 Docker Compose
+# 새로운 개발자가 가장 빠르게 시작할 수 있도록 필수 서비스만 포함
+
+services:
+  # PostgreSQL 데이터베이스
+  postgres:
+    image: postgres:15-alpine
+    container_name: nestjs-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: practice_nestjs
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis 캐시 서버
+  redis:
+    image: redis:7-alpine
+    container_name: nestjs-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  default:
+    name: nestjs-network
+
+# 💡 사용법:
+# 기본 개발 환경: docker-compose up -d
+# 관리 도구 포함: docker-compose -f docker-compose.dev.yml --profile tools up -d
+# 프로덕션 환경: docker-compose -f docker-compose.prod.yml up -d

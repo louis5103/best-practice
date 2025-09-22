@@ -1,0 +1,121 @@
+version: '3.8'
+
+# 프로덕션 환경 전용 Docker Compose
+# 보안과 성능에 최적화된 최소한의 서비스만 포함합니다.
+
+services:
+  # PostgreSQL 데이터베이스 (프로덕션 최적화)
+  postgres:
+    image: postgres:15-alpine
+    container_name: nestjs-postgres-prod
+    restart: always
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    # 프로덕션에서는 외부 포트 노출하지 않음 (보안상 중요)
+    expose:
+      - "5432"
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+      # 프로덕션 최적화 설정
+      - ./docker/postgres/postgresql.conf:/etc/postgresql/postgresql.conf
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USERNAME}']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    # 리소스 제한 설정
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
+
+  # Redis 캐시 서버 (프로덕션 최적화)
+  redis:
+    image: redis:7-alpine
+    container_name: nestjs-redis-prod
+    restart: always
+    # 프로덕션에서는 외부 포트 노출하지 않음
+    expose:
+      - "6379"
+    volumes:
+      - redis_data_prod:/data
+      # Redis 설정 파일 마운트
+      - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    # 리소스 제한 설정
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.25'
+        reservations:
+          memory: 256M
+          cpus: '0.1'
+
+  # NestJS 애플리케이션 (프로덕션용)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+      target: production
+    container_name: nestjs-app-prod
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      DB_HOST: postgres
+      REDIS_HOST: redis
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    # 리소스 제한 설정
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
+    # 보안 설정
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    user: "node"
+
+volumes:
+  postgres_data_prod:
+    driver: local
+  redis_data_prod:
+    driver: local
+
+networks:
+  default:
+    name: nestjs-prod-network
+    driver: bridge
+
+# 프로덕션 환경에서는 비밀번호 등을 Docker secrets로 관리하는 것이 권장됩니다.
+# secrets:
+#   db_password:
+#     file: ./secrets/db_password.txt
+#   redis_password:
+#     file: ./secrets/redis_password.txt

@@ -1,0 +1,81 @@
+version: '3.8'
+
+# 개발 환경 전용 Docker Compose
+# 개발자의 편의를 위한 관리 도구들을 포함합니다.
+
+services:
+  # PostgreSQL 데이터베이스
+  postgres:
+    image: postgres:15-alpine
+    container_name: nestjs-postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: practice_nestjs
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis 캐시 서버
+  redis:
+    image: redis:7-alpine
+    container_name: nestjs-redis-dev
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data_dev:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL 관리 도구 (개발 전용)
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: nestjs-pgadmin-dev
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_LISTEN_PORT: 80
+    ports:
+      - '5050:80'
+    depends_on:
+      - postgres
+    volumes:
+      - pgadmin_data_dev:/var/lib/pgadmin
+    profiles:
+      - tools # 프로파일을 사용하여 선택적 실행 가능
+
+  # Redis 관리 도구 (개발 전용)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: nestjs-redis-commander-dev
+    restart: unless-stopped
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - '8081:8081'
+    depends_on:
+      - redis
+    profiles:
+      - tools # 프로파일을 사용하여 선택적 실행 가능
+
+volumes:
+  postgres_data_dev:
+  redis_data_dev:
+  pgadmin_data_dev:
+
+networks:
+  default:
+    name: nestjs-dev-network

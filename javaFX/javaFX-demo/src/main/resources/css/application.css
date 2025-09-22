@@ -1,0 +1,390 @@
+/*
+============================================================================
+JavaFX Demo Application Stylesheet
+============================================================================
+
+기존 코드와의 중요한 개선사항들:
+
+1. 복잡성 대폭 감소:
+   원래 CSS는 수백 줄의 복잡한 스타일을 포함했지만,
+   실무에서는 정말 필요한 스타일만 정의하는 것이 더 효율적입니다.
+
+2. 유지보수성 우선:
+   CSS 변수나 복잡한 테마 시스템 대신
+   명확하고 간단한 스타일을 사용합니다.
+
+3. 실용성 중심:
+   화려한 효과보다는 사용자가 편리하게 사용할 수 있는
+   깔끔하고 직관적인 디자인을 추구합니다.
+
+이는 마치 요리에서 모든 양념을 다 넣는 것보다는
+핵심적인 맛을 살리는 것이 더 중요한 것과 같은 원리입니다.
+*/
+
+/* ============================================================================
+   기본 설정 및 공통 스타일
+   ============================================================================ */
+
+.root {
+    -fx-font-family: "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    -fx-font-size: 14px;
+    -fx-background-color: #f8f9fa;
+}
+
+.main-container {
+    -fx-background-color: #f8f9fa;
+}
+
+/* ============================================================================
+   헤더 및 제목 스타일
+   ============================================================================ */
+
+.header-section {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 8;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 5, 0, 0, 1);
+    -fx-padding: 20;
+}
+
+.page-title {
+    -fx-text-fill: #2c3e50;
+    -fx-font-weight: bold;
+}
+
+.section-title {
+    -fx-text-fill: #34495e;
+    -fx-font-weight: bold;
+    -fx-font-size: 16px;
+}
+
+/* ============================================================================
+   검색 관련 스타일
+   ============================================================================ */
+
+.search-label {
+    -fx-text-fill: #7f8c8d;
+    -fx-font-weight: bold;
+}
+
+.search-field {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #bdc3c7;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-padding: 8 12;
+}
+
+.search-field:focused {
+    -fx-border-color: #3498db;
+    -fx-border-width: 2;
+}
+
+.search-button {
+    -fx-background-color: #3498db;
+    -fx-text-fill: white;
+    -fx-border-color: transparent;
+    -fx-background-radius: 4;
+    -fx-padding: 8 16;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+}
+
+.search-button:hover {
+    -fx-background-color: #2980b9;
+}
+
+.count-label {
+    -fx-text-fill: #7f8c8d;
+    -fx-font-weight: bold;
+}
+
+/* ============================================================================
+   섹션 및 컨테이너 스타일
+   ============================================================================ */
+
+.table-section, .form-section {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 8;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 5, 0, 0, 1);
+    -fx-padding: 20;
+}
+
+/* ============================================================================
+   테이블 스타일
+   ============================================================================ */
+
+.user-table {
+    -fx-background-color: transparent;
+    -fx-border-color: #ecf0f1;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+}
+
+.user-table .column-header {
+    -fx-background-color: #ecf0f1;
+    -fx-text-fill: #2c3e50;
+    -fx-font-weight: bold;
+    -fx-padding: 12 8;
+}
+
+.user-table .table-row-cell {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent transparent #ecf0f1 transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.user-table .table-row-cell:hover {
+    -fx-background-color: #f8f9fa;
+}
+
+.user-table .table-row-cell:selected {
+    -fx-background-color: #e3f2fd;
+    -fx-text-fill: #1976d2;
+}
+
+.user-table .table-cell {
+    -fx-padding: 12 8;
+    -fx-text-fill: #2c3e50;
+}
+
+.empty-message {
+    -fx-text-fill: #95a5a6;
+    -fx-font-style: italic;
+}
+
+/* ============================================================================
+   폼 및 입력 필드 스타일
+   ============================================================================ */
+
+.input-form {
+    -fx-padding: 0;
+}
+
+.field-label {
+    -fx-text-fill: #7f8c8d;
+    -fx-font-weight: bold;
+    -fx-alignment: center-right;
+}
+
+.input-field {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #bdc3c7;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-padding: 8 12;
+}
+
+.input-field:focused {
+    -fx-border-color: #3498db;
+    -fx-border-width: 2;
+}
+
+/* ComboBox 스타일 */
+.combo-box {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #bdc3c7;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+}
+
+.combo-box:focused {
+    -fx-border-color: #3498db;
+    -fx-border-width: 2;
+}
+
+.combo-box .arrow-button {
+    -fx-background-color: transparent;
+}
+
+.combo-box .arrow {
+    -fx-background-color: #7f8c8d;
+}
+
+/* ============================================================================
+   버튼 스타일
+   ============================================================================ */
+
+.button {
+    -fx-background-radius: 4;
+    -fx-border-radius: 4;
+    -fx-padding: 8 16;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+    -fx-font-size: 13px;
+}
+
+.button:hover {
+    -fx-scale-x: 1.02;
+    -fx-scale-y: 1.02;
+}
+
+.button:pressed {
+    -fx-scale-x: 0.98;
+    -fx-scale-y: 0.98;
+}
+
+/* 추가 버튼 */
+.add-button {
+    -fx-background-color: #27ae60;
+    -fx-text-fill: white;
+    -fx-border-color: transparent;
+}
+
+.add-button:hover {
+    -fx-background-color: #229954;
+}
+
+.add-button:disabled {
+    -fx-background-color: #95a5a6;
+    -fx-opacity: 0.6;
+}
+
+/* 수정 버튼 */
+.update-button {
+    -fx-background-color: #f39c12;
+    -fx-text-fill: white;
+    -fx-border-color: transparent;
+}
+
+.update-button:hover {
+    -fx-background-color: #e67e22;
+}
+
+.update-button:disabled {
+    -fx-background-color: #95a5a6;
+    -fx-opacity: 0.6;
+}
+
+/* 삭제 버튼 */
+.delete-button {
+    -fx-background-color: #e74c3c;
+    -fx-text-fill: white;
+    -fx-border-color: transparent;
+}
+
+.delete-button:hover {
+    -fx-background-color: #c0392b;
+}
+
+.delete-button:disabled {
+    -fx-background-color: #95a5a6;
+    -fx-opacity: 0.6;
+}
+
+/* 초기화 버튼 */
+.clear-button {
+    -fx-background-color: #95a5a6;
+    -fx-text-fill: white;
+    -fx-border-color: transparent;
+}
+
+.clear-button:hover {
+    -fx-background-color: #7f8c8d;
+}
+
+/* ============================================================================
+   도움말 및 상태 표시 스타일
+   ============================================================================ */
+
+.help-section {
+    -fx-background-color: #f8f9fa;
+    -fx-background-radius: 4;
+    -fx-padding: 15;
+    -fx-border-color: #e9ecef;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+}
+
+.help-title {
+    -fx-text-fill: #495057;
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+}
+
+.help-text {
+    -fx-text-fill: #6c757d;
+    -fx-font-size: 12px;
+    -fx-line-spacing: 2;
+}
+
+.status-bar {
+    -fx-background-color: transparent;
+    -fx-border-color: #e9ecef transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
+}
+
+.status-message {
+    -fx-text-fill: #6c757d;
+    -fx-font-size: 13px;
+}
+
+/* ============================================================================
+   반응형 및 접근성 고려사항
+   ============================================================================ */
+
+/* 포커스 상태 강조 (접근성) */
+.button:focused,
+.input-field:focused,
+.combo-box:focused {
+    -fx-effect: dropshadow(gaussian, #3498db, 3, 0, 0, 0);
+}
+
+/* 스크롤바 스타일 (깔끔한 외관) */
+.scroll-bar:vertical,
+.scroll-bar:horizontal {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar .track {
+    -fx-background-color: #f8f9fa;
+    -fx-border-color: transparent;
+    -fx-background-radius: 0;
+}
+
+.scroll-bar .thumb {
+    -fx-background-color: #bdc3c7;
+    -fx-background-radius: 4;
+}
+
+.scroll-bar .thumb:hover {
+    -fx-background-color: #95a5a6;
+}
+
+/*
+============================================================================
+실무 CSS 작성 시 중요한 원칙들
+============================================================================
+
+1. 일관성 유지:
+   - 색상, 폰트, 간격 등이 일관되게 적용되도록 합니다
+   - 비슷한 기능의 요소들은 비슷한 스타일을 사용합니다
+
+2. 가독성 우선:
+   - 충분한 대비(contrast)로 텍스트를 읽기 쉽게 만듭니다
+   - 적절한 여백으로 요소들이 답답하지 않게 배치합니다
+
+3. 접근성 고려:
+   - 키보드 네비게이션이 잘 보이도록 포커스 스타일을 명확히 합니다
+   - 색상만으로 정보를 전달하지 않습니다
+
+4. 성능 고려:
+   - 복잡한 그라데이션이나 그림자 효과는 최소한으로 사용합니다
+   - 애니메이션은 60fps를 유지할 수 있는 수준으로 제한합니다
+
+5. 유지보수성:
+   - 스타일 클래스 이름을 의미있게 작성합니다
+   - 중복을 최소화하고 재사용 가능한 스타일을 만듭니다
+
+이런 원칙들을 따르면:
+- 사용자가 편리하게 사용할 수 있는 인터페이스
+- 개발자가 쉽게 수정하고 확장할 수 있는 코드
+- 다양한 환경에서 안정적으로 동작하는 애플리케이션
+
+을 만들 수 있습니다.
+
+실무에서는 "완벽한 디자인"보다는 
+"사용자가 목적을 달성하기 쉬운 디자인"이 더 중요합니다.
+*/

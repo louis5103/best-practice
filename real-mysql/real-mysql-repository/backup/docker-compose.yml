@@ -1,0 +1,21 @@
+# docker-compose.yml
+version: '3.8'
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: real-mysql-db
+    environment:
+      MYSQL_ROOT_PASSWORD: hklim0510!
+      MYSQL_DATABASE: testdb
+    ports:
+      - "3306:3306"
+    volumes:
+      # 데이터 영속성을 위한 필수 볼륨들
+      - mysql-data:/var/lib/mysql      # MySQL 데이터
+      - mysql-logs:/var/log/mysql      # 로그 파일
+      - ./mysql-config:/etc/mysql/conf.d  # 설정 파일
+
+# 명시적 볼륨 선언 (선택사항)
+volumes:
+  mysql-data:
+  mysql-logs:

@@ -1,0 +1,15 @@
+{
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "src",
+  "language": "ts",
+  "compilerOptions": {
+    "deleteOutDir": true,
+    "assets": [
+      "**/*.md"
+    ],
+    "plugins": [
+      "@nestjs/swagger"
+    ]
+  },
+  "projects": {}
+}

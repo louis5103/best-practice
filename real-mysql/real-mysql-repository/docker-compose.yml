@@ -1,0 +1,20 @@
+# docker-compose.yml
+version: '3.8'
+services:
+  linux-dev:
+    image: ubuntu:22.04
+    container_name: mysql-study-linux
+    tty: true
+    stdin_open: true
+    volumes:
+      - ./workspace:/workspace
+      - mysql-data:/var/lib/mysql
+      - mysql-logs:/var/log/mysql
+    ports:
+      - "3306:3306"
+    working_dir: /workspace
+    command: tail -f /dev/null  # 컨테이너 유지
+
+volumes:
+  mysql-data:
+  mysql-logs:

@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- 
+    Spring Boot Parent 설정
+    이것이 중요한 이유: Spring Boot Parent는 수백 개의 의존성 버전을 자동으로 관리해줍니다.
+    마치 레시피에서 재료의 비율을 미리 정해놓은 것과 같아서, 
+    개발자가 각각의 라이브러리 버전을 일일이 맞춰야 하는 번거로움을 없애줍니다.
+    -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <!-- 
+        개선사항: 2.7.x 대신 3.2.x 버전 사용
+        이유: 더 안정적이고 최신 Java 버전과 호환성이 좋습니다.
+        하지만 JavaFX와의 호환성을 위해 신중하게 선택했습니다.
+        -->
+        <version>3.2.0</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.company</groupId>
+    <artifactId>javafx-demo</artifactId>
+    <version>1.0.0</version>
+    <name>JavaFX Spring Boot Demo</name>
+    <description>실무에서 사용할 수 있는 JavaFX + Spring Boot 통합 예제</description>
+    
+    <properties>
+        <!-- 
+        Java 버전 설정
+        21 버전을 사용하는 이유: LTS 버전이면서 JavaFX와 완전히 호환됩니다.
+        실무에서는 안정성이 가장 중요하므로 LTS 버전을 권장합니다.
+        -->
+        <java.version>21</java.version>
+        
+        <!-- 
+        JavaFX 버전 설정
+        개선사항: 21.0.2 버전 사용 (이전 코드에서는 버전이 일관성이 없었음)
+        이유: Java 21과 완전히 호환되며, 안정성이 검증된 버전입니다.
+        -->
+        <javafx.version>21.0.2</javafx.version>
+        
+        <!-- 
+        JavaFX Maven Plugin 버전
+        개선사항: 0.0.8 버전 사용 (이전에는 명시하지 않았음)
+        이유: Maven Central에서 안정성이 검증된 최신 버전입니다.
+        -->
+        <javafx.maven.plugin.version>0.0.8</javafx.maven.plugin.version>
+        
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <dependencies>
+        <!-- 
+        Spring Boot 핵심 의존성
+        이것이 필요한 이유: 의존성 주입, 자동 설정, 애플리케이션 라이프사이클 관리 등
+        Spring Boot의 핵심 기능들을 제공합니다.
+        웹 관련 기능은 제외하여 불필요한 의존성을 줄였습니다.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+            <!-- 
+            개선사항: 웹 관련 의존성을 명시적으로 제외
+            이유: 데스크톱 애플리케이션에서는 웹 서버가 필요하지 않으며,
+            메모리 사용량을 줄이고 시작 시간을 단축할 수 있습니다.
+            -->
+            <exclusions>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-tomcat</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        
+        <!-- 
+        데이터베이스 연동을 위한 JPA
+        실무에서 거의 모든 애플리케이션은 데이터를 저장해야 하므로 JPA는 필수입니다.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        
+        <!-- 
+        경량 데이터베이스 H2
+        개선사항: H2를 사용하는 이유를 명확히 설명
+        실무에서는 개발과 테스트 단계에서 H2를 사용하고,
+        프로덕션에서는 PostgreSQL이나 MySQL을 사용하는 것이 일반적입니다.
+        H2는 설치나 설정이 필요 없어서 데모나 프로토타입에 매우 유용합니다.
+        -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        
+        <!-- 
+        JavaFX 핵심 모듈들
+        개선사항: 필요한 모듈만 선택적으로 포함
+        controls: 버튼, 텍스트필드 등 기본 UI 컴포넌트
+        fxml: FXML 파일 로딩을 위한 모듈
+        -->
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-controls</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-fxml</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
+        
+        <!-- 
+        Spring과 JavaFX 통합을 위한 라이브러리
+        개선사항: FXWeaver 대신 더 안정적인 접근법 사용
+        이유: FXWeaver는 좋은 라이브러리지만, Spring Boot 3.x와의 호환성에서
+        간헐적인 문제가 보고되고 있습니다. 대신 직접적인 통합 방법을 사용하겠습니다.
+        이렇게 하면 외부 라이브러리 의존성을 줄이고 더 안정적인 코드를 만들 수 있습니다.
+        -->
+        
+        <!-- 
+        유틸리티 라이브러리들
+        Apache Commons Lang: 문자열 처리, 날짜 처리 등에 유용한 유틸리티 제공
+        실무에서 거의 필수적으로 사용되는 라이브러리입니다.
+        -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+        </dependency>
+        
+        <!-- 
+        개발 생산성을 위한 Lombok
+        Getter, Setter, Builder 등의 보일러플레이트 코드를 자동 생성해줍니다.
+        특히 DTO나 Entity 클래스에서 매우 유용합니다.
+        -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+        
+        <!-- 
+        테스트 의존성들
+        Spring Boot의 테스트 스타터에는 JUnit 5, Mockito, AssertJ 등이 포함되어 있습니다.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+<!--        &lt;!&ndash; https://mvnrepository.com/artifact/org.mockito/mockito-junit-jupiter &ndash;&gt;-->
+<!--        <dependency>-->
+<!--            <groupId>org.mockito</groupId>-->
+<!--            <artifactId>mockito-junit-jupiter</artifactId>-->
+<!--            <version>5.19.0</version>-->
+<!--            <scope>test</scope>-->
+<!--        </dependency>-->
+        
+        <!-- 
+        JavaFX 테스트를 위한 TestFX
+        개선사항: 버전을 명시하고 현실적인 테스트 접근법 사용
+        TestFX는 GUI 테스트에 매우 유용하지만, 설정이 복잡할 수 있으므로
+        실무에서는 핵심 기능만 테스트하는 것을 권장합니다.
+        -->
+        <dependency>
+            <groupId>org.testfx</groupId>
+            <artifactId>testfx-core</artifactId>
+            <version>4.0.18</version>
+            <scope>test</scope>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.testfx</groupId>
+            <artifactId>testfx-junit5</artifactId>
+            <version>4.0.18</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- 
+            Spring Boot Maven 플러그인
+            이 플러그인의 역할: 모든 의존성이 포함된 실행 가능한 JAR 파일을 생성합니다.
+            실무에서 이것이 중요한 이유: 사용자에게 배포할 때 단일 파일로 배포가 가능하며,
+            Java가 설치된 어떤 컴퓨터에서든 실행할 수 있습니다.
+            -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <!-- 
+                    Lombok 제외 설정
+                    빌드할 때 Lombok이 포함되지 않도록 합니다.
+                    런타임에는 Lombok이 필요하지 않기 때문입니다.
+                    -->
+                    <excludes>
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+            
+            <!-- 
+            JavaFX Maven 플러그인
+            개발 중에 'mvn javafx:run' 명령으로 애플리케이션을 쉽게 실행할 수 있게 해줍니다.
+            이것이 유용한 이유: IDE 없이도 명령줄에서 애플리케이션을 실행하고 테스트할 수 있습니다.
+            -->
+            <plugin>
+                <groupId>org.openjfx</groupId>
+                <artifactId>javafx-maven-plugin</artifactId>
+                <version>${javafx.maven.plugin.version}</version>
+                <configuration>
+                    <mainClass>com.company.javafxdemo.JavaFxDemoApplication</mainClass>
+                </configuration>
+            </plugin>
+            
+            <!-- 
+            컴파일러 플러그인
+            Java 21의 모든 기능을 사용할 수 있도록 컴파일러를 설정합니다.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                    <encoding>${project.build.sourceEncoding}</encoding>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

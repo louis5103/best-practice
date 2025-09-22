@@ -1,0 +1,4 @@
+{
+  "methodArn": "arn:aws:execute-api:test/",
+  "authorizationToken": "aaaaaaaa"
+}

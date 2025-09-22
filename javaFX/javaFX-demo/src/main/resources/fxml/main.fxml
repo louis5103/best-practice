@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+메인 화면 FXML 정의
+
+기존 코드와의 중요한 개선사항들:
+
+1. 과도한 복잡성 제거:
+   원래 코드는 너무 많은 컨테이너와 복잡한 레이아웃을 사용했습니다.
+   실무에서는 "단순함이 최고의 복잡성"이라는 원칙을 따르는 것이 좋습니다.
+
+2. 실용적인 레이아웃:
+   사용자가 실제로 사용하기 편한 구조로 설계했습니다.
+   데스크톱 애플리케이션의 일반적인 패턴을 따릅니다.
+
+3. 유지보수 용이성:
+   요소들의 ID와 구조가 명확하여 나중에 수정하기 쉽습니다.
+   CSS 클래스도 의미가 명확한 이름을 사용합니다.
+
+이는 마치 집을 설계할 때 화려한 장식보다는
+거주자가 편리하게 생활할 수 있는 실용적인 구조를 우선시하는 것과 같습니다.
+-->
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
+
+<!-- 
+루트 컨테이너: VBox 사용
+BorderPane 대신 VBox를 사용하는 이유:
+1. 더 단순한 구조
+2. 사용자 관리 화면에는 복잡한 영역 분할이 불필요
+3. 유지보수하기 쉬움
+-->
+<VBox xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.company.javafxdemo.controller.MainController"
+      spacing="10" styleClass="main-container">
+    
+    <!-- 전체 컨테이너 패딩 -->
+    <padding>
+        <Insets top="20" right="20" bottom="20" left="20"/>
+    </padding>
+
+    <!-- ========================================================================
+         헤더 영역: 제목과 검색
+         ======================================================================== -->
+    <VBox spacing="15" styleClass="header-section">
+        
+        <!-- 페이지 제목 -->
+        <Label text="사용자 관리" styleClass="page-title">
+            <font>
+                <Font name="System Bold" size="24"/>
+            </font>
+        </Label>
+        
+        <!-- 검색 영역 -->
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <Label text="검색:" styleClass="search-label"/>
+            <TextField fx:id="searchField" promptText="이름 또는 이메일로 검색..." 
+                      prefWidth="300" styleClass="search-field"/>
+            <Button fx:id="searchButton" text="검색" styleClass="search-button"/>
+            
+            <!-- 스페이서 -->
+            <Region HBox.hgrow="ALWAYS"/>
+            
+            <!-- 사용자 수 표시 -->
+            <Label fx:id="totalCountLabel" text="총 0명" styleClass="count-label"/>
+        </HBox>
+        
+    </VBox>
+
+    <!-- ========================================================================
+         메인 콘텐츠 영역: 좌우 분할 (테이블 + 폼)
+         ======================================================================== -->
+    <HBox spacing="20" VBox.vgrow="ALWAYS">
+        
+        <!-- 왼쪽: 사용자 목록 테이블 -->
+        <VBox spacing="10" styleClass="table-section" HBox.hgrow="ALWAYS">
+            
+            <Label text="사용자 목록" styleClass="section-title"/>
+            
+            <!-- 사용자 테이블 -->
+            <TableView fx:id="userTable" VBox.vgrow="ALWAYS" styleClass="user-table">
+                <columns>
+                    <!--
+                    테이블 컬럼 설정
+                    - prefWidth: 각 컬럼의 기본 너비
+                    - resizable: 사용자가 크기 조절 가능 여부
+                    - sortable: 정렬 가능 여부
+                    -->
+                    <TableColumn fx:id="nameColumn" text="이름" prefWidth="100" resizable="true"/>
+                    <TableColumn fx:id="emailColumn" text="이메일" prefWidth="180" resizable="true"/>
+                    <TableColumn fx:id="departmentColumn" text="부서" prefWidth="100" resizable="true"/>
+                    <TableColumn fx:id="phoneColumn" text="전화번호" prefWidth="120" resizable="true"/>
+                </columns>
+                
+                <!-- 테이블이 비어있을 때 표시할 메시지 -->
+                <placeholder>
+                    <Label text="등록된 사용자가 없습니다." styleClass="empty-message"/>
+                </placeholder>
+            </TableView>
+            
+        </VBox>
+        
+        <!-- 오른쪽: 사용자 입력/수정 폼 -->
+        <VBox spacing="15" styleClass="form-section" prefWidth="300" minWidth="280">
+            
+            <Label text="사용자 정보" styleClass="section-title"/>
+            
+            <!-- 입력 폼 -->
+            <GridPane hgap="10" vgap="15" styleClass="input-form">
+                <columnConstraints>
+                    <!-- 첫 번째 컬럼: 라벨용 -->
+                    <ColumnConstraints minWidth="60" prefWidth="80" maxWidth="100"/>
+                    <!-- 두 번째 컬럼: 입력 필드용 -->
+                    <ColumnConstraints hgrow="ALWAYS"/>
+                </columnConstraints>
+                
+                <!-- 이름 입력 -->
+                <Label text="이름:" GridPane.columnIndex="0" GridPane.rowIndex="0" styleClass="field-label"/>
+                <TextField fx:id="nameField" GridPane.columnIndex="1" GridPane.rowIndex="0" 
+                          promptText="이름을 입력하세요" styleClass="input-field"/>
+                
+                <!-- 이메일 입력 -->
+                <Label text="이메일:" GridPane.columnIndex="0" GridPane.rowIndex="1" styleClass="field-label"/>
+                <TextField fx:id="emailField" GridPane.columnIndex="1" GridPane.rowIndex="1" 
+                          promptText="email@company.com" styleClass="input-field"/>
+                
+                <!-- 전화번호 입력 -->
+                <Label text="전화번호:" GridPane.columnIndex="0" GridPane.rowIndex="2" styleClass="field-label"/>
+                <TextField fx:id="phoneField" GridPane.columnIndex="1" GridPane.rowIndex="2" 
+                          promptText="010-1234-5678" styleClass="input-field"/>
+                
+                <!-- 부서 선택 -->
+                <Label text="부서:" GridPane.columnIndex="0" GridPane.rowIndex="3" styleClass="field-label"/>
+                <ComboBox fx:id="departmentComboBox" GridPane.columnIndex="1" GridPane.rowIndex="3" 
+                         promptText="부서를 선택하세요" maxWidth="Infinity" styleClass="input-field"/>
+                
+            </GridPane>
+            
+            <!-- 버튼 영역 -->
+            <VBox spacing="10">
+                
+                <!-- 주요 액션 버튼들 -->
+                <HBox spacing="10">
+                    <Button fx:id="addButton" text="추가" styleClass="add-button" prefWidth="70"/>
+                    <Button fx:id="updateButton" text="수정" styleClass="update-button" prefWidth="70"/>
+                    <Button fx:id="deleteButton" text="삭제" styleClass="delete-button" prefWidth="70"/>
+                </HBox>
+                
+                <!-- 보조 액션 버튼 -->
+                <HBox spacing="10">
+                    <Button fx:id="clearButton" text="초기화" styleClass="clear-button" prefWidth="150"/>
+                </HBox>
+                
+            </VBox>
+            
+            <!-- 도움말 텍스트 -->
+            <VBox spacing="8" styleClass="help-section">
+                <Label text="사용 방법:" styleClass="help-title"/>
+                <Label text="• 테이블에서 사용자를 선택하여 수정/삭제" styleClass="help-text" wrapText="true"/>
+                <Label text="• 모든 필드를 입력한 후 '추가' 버튼 클릭" styleClass="help-text" wrapText="true"/>
+                <Label text="• 검색은 이름과 이메일을 대상으로 합니다" styleClass="help-text" wrapText="true"/>
+            </VBox>
+            
+        </VBox>
+        
+    </HBox>
+
+    <!-- ========================================================================
+         하단 상태바
+         ======================================================================== -->
+    <HBox styleClass="status-bar" alignment="CENTER_LEFT" spacing="10">
+        <padding>
+            <Insets top="10" right="0" bottom="0" left="0"/>
+        </padding>
+        
+        <!-- 상태 메시지 -->
+        <Label fx:id="statusLabel" text="준비됨" styleClass="status-message"/>
+        
+        <!-- 스페이서 -->
+        <Region HBox.hgrow="ALWAYS"/>
+        
+        <!-- 추가 정보가 필요하다면 여기에 배치 -->
+        
+    </HBox>
+
+</VBox>
+
+<!--
+FXML 설계 시 고려한 원칙들:
+
+1. 계층 구조의 명확성:
+   각 영역의 역할이 명확하게 구분됩니다.
+   헤더(검색) -> 메인(테이블+폼) -> 하단(상태) 순서로 구성
+
+2. 반응형 레이아웃:
+   HBox.hgrow, VBox.vgrow를 사용하여 창 크기가 변경되어도 
+   적절히 조정되도록 설계했습니다.
+
+3. 사용자 경험 고려:
+   - promptText로 입력 가이드 제공
+   - placeholder로 빈 테이블 상태 안내
+   - 도움말 섹션으로 사용법 안내
+
+4. 접근성:
+   - 명확한 라벨 텍스트
+   - 키보드 네비게이션 지원 (Tab 순서)
+   - 적절한 컨트롤 크기
+
+5. 유지보수성:
+   - 의미있는 fx:id 이름
+   - CSS 클래스로 스타일 분리
+   - 주석으로 각 영역의 역할 명시
+
+이런 원칙들을 따르면 다음과 같은 장점이 있습니다:
+- 개발자가 코드를 쉽게 이해할 수 있음
+- 디자이너가 CSS로 스타일을 쉽게 변경할 수 있음
+- 새로운 기능을 추가하기 용이함
+- 사용자가 직관적으로 사용할 수 있음
+
+실무에서는 이런 "보이지 않는 품질"이 
+프로젝트의 성공을 결정하는 중요한 요소입니다.
+-->
