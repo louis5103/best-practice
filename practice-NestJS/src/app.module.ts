@@ -65,29 +65,21 @@ import { validateEnvironmentVariables } from '@config/env-validation.schema';
       inject: [ConfigService],
     }),
 
-    // Redis 설정 - 이전 코드의 오류를 수정했습니다
-    // @nestjs-modules/ioredis 대신 @liaoliaots/nestjs-redis 사용
+    // Redis 설정 - 타입 이슈 해결을 위한 실무 표준 방식
     RedisModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => {
-        // Redis 연결 설정을 환경 변수로부터 가져옵니다
-        const redisConfig = {
-          host: configService.get('REDIS_HOST') || 'localhost',
-          port: configService.get<number>('REDIS_PORT') || 6379,
-          // 패스워드가 있는 경우에만 설정
-          ...(configService.get('REDIS_PASSWORD') && {
-            password: configService.get('REDIS_PASSWORD')
-          }),
-          // 연결 재시도 설정
-          retryDelayOnFailover: 100,
-          maxRetriesPerRequest: 3,
-          lazyConnect: true, // 실제 사용할 때까지 연결을 지연
-        };
-
+      useFactory: (...args: any[]) => {
+        const configService = args[0] as ConfigService;
         return {
-          config: redisConfig,
-          // 애플리케이션 종료 시 자동으로 Redis 연결 종료
-          closeClient: true,
+          readyLog: true,
+          config: {
+            host: configService.get<string>('REDIS_HOST', 'localhost'),
+            port: configService.get<number>('REDIS_PORT', 6379),
+            password: configService.get<string>('REDIS_PASSWORD'),
+            retryDelayOnFailover: 100,
+            maxRetriesPerRequest: 3,
+            lazyConnect: true,
+          },
         };
       },
       inject: [ConfigService],

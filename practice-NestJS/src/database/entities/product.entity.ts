@@ -21,7 +21,7 @@ export class Product {
    * 상품 고유 식별자입니다.
    */
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   /**
    * 상품명입니다.
@@ -30,7 +30,7 @@ export class Product {
     length: 200,
     comment: '상품명'
   })
-  name: string;
+  name!: string;
 
   /**
    * 상품 상세 설명입니다.
@@ -51,7 +51,7 @@ export class Product {
     scale: 2,
     comment: '상품 가격'
   })
-  price: number;
+  price!: number;
 
   /**
    * 상품 카테고리입니다.
@@ -60,7 +60,7 @@ export class Product {
     length: 100,
     comment: '상품 카테고리'
   })
-  category: string;
+  category!: string;
 
   /**
    * 재고 수량입니다.
@@ -69,7 +69,7 @@ export class Product {
     default: 0,
     comment: '재고 수량'
   })
-  stock: number;
+  stock!: number;
 
   /**
    * 상품 활성화 상태입니다.
@@ -78,7 +78,7 @@ export class Product {
     default: true,
     comment: '상품 활성화 여부'
   })
-  isActive: boolean;
+  isActive!: boolean;
 
   /**
    * 상품 이미지 URL입니다.
@@ -97,7 +97,7 @@ export class Product {
     name: 'created_at',
     comment: '상품 등록 시간'
   })
-  createdAt: Date;
+  createdAt!: Date;
 
   /**
    * 상품 정보 수정 시간입니다.
@@ -106,5 +106,5 @@ export class Product {
     name: 'updated_at',
     comment: '상품 정보 수정 시간'
   })
-  updatedAt: Date;
+  updatedAt!: Date;
 }

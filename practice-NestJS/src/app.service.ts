@@ -16,7 +16,7 @@ export class AppService {
   constructor(
     private configService: ConfigService,
     private dataSource: DataSource,
-    private redisService: RedisService
+    private redisService: RedisService,
   ) {}
 
   /**
@@ -71,7 +71,7 @@ export class AppService {
         healthStatus.database = 'connected';
       }
     } catch (error) {
-      console.error('데이터베이스 상태 확인 중 오류:', error.message);
+      console.error('데이터베이스 상태 확인 중 오류:', error instanceof Error ? error.message : String(error));
       healthStatus.database = 'error';
     }
 
@@ -88,7 +88,7 @@ export class AppService {
         await redis.del('health-check');
       }
     } catch (error) {
-      console.error('Redis 상태 확인 중 오류:', error.message);
+      console.error('Redis 상태 확인 중 오류:', error instanceof Error ? error.message : String(error));
       healthStatus.redis = 'error';
     }
 
@@ -124,7 +124,7 @@ export class AppService {
 
       console.log('🎉 애플리케이션 초기화 완료');
     } catch (error) {
-      console.error('❌ 초기화 중 오류 발생:', error.message);
+      console.error('❌ 초기화 중 오류 발생:', error instanceof Error ? error.message : String(error));
     }
   }
 }

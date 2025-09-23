@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Exclude, Transform } from 'class-transformer';
+import { Exclude } from 'class-transformer';
 
 /**
  * 사용자 응답 DTO입니다.
@@ -18,7 +18,7 @@ export class UserResponseDto {
     description: '사용자 고유 ID',
     example: 1
   })
-  id: number;
+  id!: number;
 
   /**
    * 사용자 이메일 주소입니다.
@@ -27,7 +27,7 @@ export class UserResponseDto {
     description: '사용자 이메일 주소',
     example: 'user@example.com'
   })
-  email: string;
+  email!: string;
 
   /**
    * 사용자 실명입니다.
@@ -36,7 +36,7 @@ export class UserResponseDto {
     description: '사용자 이름',
     example: '김철수'
   })
-  name: string;
+  name!: string;
 
   /**
    * 사용자 권한 레벨입니다.
@@ -46,7 +46,7 @@ export class UserResponseDto {
     example: 'user',
     enum: ['user', 'moderator', 'admin']
   })
-  role: 'user' | 'moderator' | 'admin';
+  role!: 'user' | 'moderator' | 'admin';
 
   /**
    * 계정 활성화 상태입니다.
@@ -55,7 +55,7 @@ export class UserResponseDto {
     description: '계정 활성화 여부',
     example: true
   })
-  isActive: boolean;
+  isActive!: boolean;
 
   /**
    * 이메일 인증 완료 여부입니다.
@@ -64,7 +64,7 @@ export class UserResponseDto {
     description: '이메일 인증 완료 여부',
     example: true
   })
-  isEmailVerified: boolean;
+  isEmailVerified!: boolean;
 
   /**
    * 마지막 로그인 시간입니다.
@@ -88,7 +88,7 @@ export class UserResponseDto {
     type: 'string',
     format: 'date-time'
   })
-  createdAt: Date;
+  createdAt!: Date;
 
   /**
    * 계정 정보 수정 시간입니다.
@@ -99,7 +99,7 @@ export class UserResponseDto {
     type: 'string',
     format: 'date-time'
   })
-  updatedAt: Date;
+  updatedAt!: Date;
 
   /**
    * 비밀번호 필드입니다.
@@ -162,7 +162,7 @@ export class PaginatedUserResponseDto {
     description: '현재 페이지의 사용자 목록',
     type: [UserResponseDto]
   })
-  data: UserResponseDto[];
+  data!: UserResponseDto[];
 
   /**
    * 전체 사용자 수입니다.
@@ -171,7 +171,7 @@ export class PaginatedUserResponseDto {
     description: '전체 사용자 수',
     example: 150
   })
-  total: number;
+  total!: number;
 
   /**
    * 현재 페이지 번호입니다.
@@ -180,7 +180,7 @@ export class PaginatedUserResponseDto {
     description: '현재 페이지 번호',
     example: 1
   })
-  page: number;
+  page!: number;
 
   /**
    * 페이지당 항목 수입니다.
@@ -189,7 +189,7 @@ export class PaginatedUserResponseDto {
     description: '페이지당 사용자 수',
     example: 10
   })
-  limit: number;
+  limit!: number;
 
   /**
    * 전체 페이지 수입니다.
@@ -198,7 +198,7 @@ export class PaginatedUserResponseDto {
     description: '전체 페이지 수',
     example: 15
   })
-  totalPages: number;
+  totalPages!: number;
 
   /**
    * 이전 페이지 존재 여부입니다.
@@ -207,7 +207,7 @@ export class PaginatedUserResponseDto {
     description: '이전 페이지 존재 여부',
     example: false
   })
-  hasPrevious: boolean;
+  hasPrevious!: boolean;
 
   /**
    * 다음 페이지 존재 여부입니다.
@@ -216,7 +216,7 @@ export class PaginatedUserResponseDto {
     description: '다음 페이지 존재 여부',
     example: true
   })
-  hasNext: boolean;
+  hasNext!: boolean;
 
   /**
    * 페이지네이션 정보를 포함한 응답 객체를 생성하는 정적 메서드입니다.
@@ -260,7 +260,7 @@ export class UserStatsDto {
     description: '전체 사용자 수',
     example: 1250
   })
-  totalUsers: number;
+  totalUsers!: number;
 
   /**
    * 활성화된 사용자 수입니다.
@@ -269,7 +269,7 @@ export class UserStatsDto {
     description: '활성화된 사용자 수',
     example: 1180
   })
-  activeUsers: number;
+  activeUsers!: number;
 
   /**
    * 비활성화된 사용자 수입니다.
@@ -278,7 +278,7 @@ export class UserStatsDto {
     description: '비활성화된 사용자 수',
     example: 70
   })
-  inactiveUsers: number;
+  inactiveUsers!: number;
 
   /**
    * 이메일 인증을 완료한 사용자 수입니다.
@@ -287,7 +287,7 @@ export class UserStatsDto {
     description: '이메일 인증 완료 사용자 수',
     example: 1100
   })
-  verifiedUsers: number;
+  verifiedUsers!: number;
 
   /**
    * 역할별 사용자 수입니다.
@@ -300,7 +300,7 @@ export class UserStatsDto {
       admin: 10
     }
   })
-  usersByRole: {
+  usersByRole!: {
     user: number;
     moderator: number;
     admin: number;
@@ -313,5 +313,5 @@ export class UserStatsDto {
     description: '최근 7일간 신규 사용자 수',
     example: 45
   })
-  newUsersLastWeek: number;
+  newUsersLastWeek!: number;
 }

@@ -38,7 +38,7 @@ export class RegisterDto {
   @IsNotEmpty({ 
     message: '이메일은 필수 입력 항목입니다.' 
   })
-  email: string;
+  email!: string;
 
   /**
    * 사용자의 실제 이름입니다.
@@ -67,7 +67,7 @@ export class RegisterDto {
   @IsNotEmpty({ 
     message: '이름은 필수 입력 항목입니다.' 
   })
-  name: string;
+  name!: string;
 
   /**
    * 사용자 비밀번호입니다.
@@ -102,7 +102,7 @@ export class RegisterDto {
   @IsNotEmpty({ 
     message: '비밀번호는 필수 입력 항목입니다.' 
   })
-  password: string;
+  password!: string;
 
   /**
    * 비밀번호 확인 필드입니다.
@@ -121,7 +121,7 @@ export class RegisterDto {
   @IsNotEmpty({ 
     message: '비밀번호 확인은 필수 입력 항목입니다.' 
   })
-  passwordConfirm: string;
+  passwordConfirm!: string;
 
   /**
    * 사용자 역할입니다.

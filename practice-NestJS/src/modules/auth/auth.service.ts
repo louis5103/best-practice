@@ -105,12 +105,14 @@ export class AuthService {
         user: userWithoutPassword,
         token,
       };
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof ConflictException) {
         throw error;
       }
       
-      this.logger.error(`회원가입 중 오류 발생: ${error.message}`, error.stack);
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`회원가입 중 오류 발생: ${errorMessage}`, errorStack);
       throw new BadRequestException('회원가입 중 오류가 발생했습니다.');
     }
   }
@@ -174,12 +176,14 @@ export class AuthService {
         user: userWithoutPassword,
         token,
       };
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof UnauthorizedException) {
         throw error;
       }
       
-      this.logger.error(`로그인 중 오류 발생: ${error.message}`, error.stack);
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`로그인 중 오류 발생: ${errorMessage}`, errorStack);
       throw new BadRequestException('로그인 중 오류가 발생했습니다.');
     }
   }
@@ -210,8 +214,10 @@ export class AuthService {
       return {
         message: '로그아웃이 완료되었습니다.',
       };
-    } catch (error) {
-      this.logger.error(`로그아웃 중 오류 발생: ${error.message}`, error.stack);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`로그아웃 중 오류 발생: ${errorMessage}`, errorStack);
       throw new BadRequestException('로그아웃 중 오류가 발생했습니다.');
     }
   }
@@ -256,8 +262,10 @@ export class AuthService {
       // 비밀번호는 절대 반환하지 않습니다.
       const { password, ...userWithoutPassword } = user;
       return userWithoutPassword;
-    } catch (error) {
-      this.logger.error(`프로필 조회 중 오류 발생: ${error.message}`, error.stack);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`프로필 조회 중 오류 발생: ${errorMessage}`, errorStack);
       throw new BadRequestException('프로필 조회 중 오류가 발생했습니다.');
     }
   }

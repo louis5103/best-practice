@@ -2,7 +2,6 @@ import {
   IsString, 
   IsNumber, 
   IsOptional, 
-  IsBoolean,
   MinLength, 
   MaxLength,
   Min,
@@ -11,11 +10,9 @@ import {
   IsNotEmpty,
   Matches,
   IsEnum,
-  ValidateIf,
   IsArray,
   ArrayMinSize,
-  ArrayMaxSize,
-  ValidateNested
+  ArrayMaxSize
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type, Transform } from 'class-transformer';
@@ -101,7 +98,7 @@ export class CreateProductDto {
   @Matches(/^[가-힣a-zA-Z0-9\s\-_.()&+]+$/, {
     message: '상품명에 허용되지 않은 특수문자가 포함되어 있습니다.'
   })
-  name: string;
+  name!: string;
 
   /**
    * 상품 상세 설명입니다.
@@ -136,7 +133,7 @@ export class CreateProductDto {
   @Min(1, { message: '가격은 최소 1원 이상이어야 합니다.' })
   @Max(10000000, { message: '가격은 최대 1,000만원 이하여야 합니다.' })
   @Type(() => Number)
-  price: number;
+  price!: number;
 
   /**
    * 할인 가격입니다 (선택사항).
@@ -171,7 +168,7 @@ export class CreateProductDto {
   @IsEnum(ProductCategory, {
     message: `카테고리는 다음 중 하나여야 합니다: ${Object.values(ProductCategory).join(', ')}`
   })
-  category: ProductCategory;
+  category!: ProductCategory;
 
   /**
    * 상품 상태입니다.
@@ -314,21 +311,4 @@ export class CreateProductDto {
     message: '치수는 "가로 x 세로 x 높이" 형태로 입력해주세요. (예: 14.7 x 7.1 x 0.8)'
   })
   dimensions?: string;
-
-  /**
-   * 비즈니스 규칙 검증: 할인 가격은 정가보다 낮아야 합니다.
-   * 
-   * 이 메서드는 class-validator의 커스텀 검증 기능을 활용한 것으로,
-   * 단일 필드가 아닌 여러 필드 간의 관계를 검증할 때 사용합니다.
-   * 
-   * 실무에서는 이런 비즈니스 규칙들이 매우 중요한데, 
-   * 예를 들어 관리자가 실수로 할인가를 정가보다 높게 설정하는 것을 방지합니다.
-   */
-  @ValidateIf((obj: CreateProductDto) => obj.discountPrice !== undefined)
-  private validateDiscountPrice() {
-    if (this.discountPrice && this.discountPrice >= this.price) {
-      throw new Error('할인 가격은 정가보다 낮아야 합니다.');
-    }
-    return true;
-  }
 }

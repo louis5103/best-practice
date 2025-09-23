@@ -129,7 +129,7 @@ export class ChangePasswordDto {
   @IsString({ 
     message: '현재 비밀번호는 문자열이어야 합니다.' 
   })
-  currentPassword: string;
+  currentPassword!: string;
 
   /**
    * 새로운 비밀번호입니다.
@@ -156,7 +156,7 @@ export class ChangePasswordDto {
       message: '새 비밀번호는 영문 대소문자, 숫자, 특수문자를 각각 1개 이상 포함해야 합니다.'
     }
   )
-  newPassword: string;
+  newPassword!: string;
 
   /**
    * 새로운 비밀번호 확인입니다.
@@ -169,5 +169,5 @@ export class ChangePasswordDto {
   @IsString({ 
     message: '새 비밀번호 확인은 문자열이어야 합니다.' 
   })
-  newPasswordConfirm: string;
+  newPasswordConfirm!: string;
 }

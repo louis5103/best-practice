@@ -12,44 +12,44 @@ export class UserInfoDto {
     description: '사용자 고유 ID',
     example: 1
   })
-  id: number;
+  id!: number;
 
   @ApiProperty({
     description: '사용자 이메일',
     example: 'user@example.com'
   })
-  email: string;
+  email!: string;
 
   @ApiProperty({
     description: '사용자 이름',
     example: '김철수'
   })
-  name: string;
+  name!: string;
 
   @ApiProperty({
     description: '사용자 역할',
     example: 'user',
     enum: ['user', 'moderator', 'admin']
   })
-  role: string;
+  role!: string;
 
   @ApiProperty({
     description: '계정 활성화 상태',
     example: true
   })
-  isActive: boolean;
+  isActive!: boolean;
 
   @ApiProperty({
     description: '이메일 인증 상태',
     example: true
   })
-  isEmailVerified: boolean;
+  isEmailVerified!: boolean;
 
   @ApiProperty({
     description: '계정 생성일',
     example: '2024-01-01T00:00:00.000Z'
   })
-  createdAt: Date;
+  createdAt!: Date;
 }
 
 /**
@@ -64,7 +64,7 @@ export class AuthResponseDto {
     description: 'JWT 액세스 토큰',
     example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
   })
-  accessToken: string;
+  accessToken!: string;
 
   @ApiProperty({
     description: '토큰 타입',
@@ -77,25 +77,25 @@ export class AuthResponseDto {
     description: '토큰 만료 시간 (초)',
     example: 86400
   })
-  expiresIn: number;
+  expiresIn!: number;
 
   @ApiProperty({
     description: '인증된 사용자 정보',
     type: UserInfoDto
   })
-  user: UserInfoDto;
+  user!: UserInfoDto;
 
   @ApiProperty({
     description: '인증 성공 메시지',
     example: '로그인에 성공했습니다.'
   })
-  message: string;
+  message!: string;
 
   @ApiProperty({
     description: '응답 시간',
     example: '2024-01-01T12:00:00.000Z'
   })
-  timestamp: string;
+  timestamp!: string;
 }
 
 /**
@@ -110,25 +110,25 @@ export class RegisterResponseDto {
     description: '회원가입 성공 메시지',
     example: '회원가입이 완료되었습니다. 이메일 인증을 진행해 주세요.'
   })
-  message: string;
+  message!: string;
 
   @ApiProperty({
     description: '생성된 사용자 정보',
     type: UserInfoDto
   })
-  user: UserInfoDto;
+  user!: UserInfoDto;
 
   @ApiProperty({
     description: '다음 단계 안내',
     example: '이메일로 전송된 인증 링크를 확인해 주세요.'
   })
-  nextStep: string;
+  nextStep!: string;
 
   @ApiProperty({
     description: '응답 시간',
     example: '2024-01-01T12:00:00.000Z'
   })
-  timestamp: string;
+  timestamp!: string;
 }
 
 /**
@@ -142,7 +142,7 @@ export class RefreshTokenDto {
     description: '리프레시 토큰',
     example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
   })
-  refreshToken: string;
+  refreshToken!: string;
 }
 
 /**
@@ -157,11 +157,11 @@ export class LogoutResponseDto {
     description: '로그아웃 성공 메시지',
     example: '성공적으로 로그아웃되었습니다.'
   })
-  message: string;
+  message!: string;
 
   @ApiProperty({
     description: '응답 시간',
     example: '2024-01-01T12:00:00.000Z'
   })
-  timestamp: string;
+  timestamp!: string;
 }

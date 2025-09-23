@@ -32,7 +32,7 @@ export class LoginDto {
   @IsNotEmpty({ 
     message: '이메일은 필수 입력 항목입니다.' 
   })
-  email: string;
+  email!: string;
 
   /**
    * 사용자 비밀번호입니다.
@@ -55,5 +55,5 @@ export class LoginDto {
   @IsNotEmpty({ 
     message: '비밀번호는 필수 입력 항목입니다.' 
   })
-  password: string;
+  password!: string;
 }

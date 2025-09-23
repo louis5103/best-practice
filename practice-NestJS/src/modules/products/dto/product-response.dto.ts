@@ -8,13 +8,13 @@ export class ProductResponseDto {
     description: '상품 고유 ID',
     example: 1
   })
-  id: number;
+  id!: number;
 
   @ApiProperty({
     description: '상품명',
     example: '스마트폰 케이스'
   })
-  name: string;
+  name!: string;
 
   @ApiProperty({
     description: '상품 설명',
@@ -27,25 +27,25 @@ export class ProductResponseDto {
     description: '상품 가격',
     example: 15000
   })
-  price: number;
+  price!: number;
 
   @ApiProperty({
     description: '상품 카테고리',
     example: '액세서리'
   })
-  category: string;
+  category!: string;
 
   @ApiProperty({
     description: '재고 수량',
     example: 100
   })
-  stock: number;
+  stock!: number;
 
   @ApiProperty({
     description: '상품 활성화 상태',
     example: true
   })
-  isActive: boolean;
+  isActive!: boolean;
 
   @ApiProperty({
     description: '상품 이미지 URL',
@@ -58,13 +58,13 @@ export class ProductResponseDto {
     description: '상품 등록 시간',
     example: '2024-01-01T00:00:00.000Z'
   })
-  createdAt: Date;
+  createdAt!: Date;
 
   @ApiProperty({
     description: '상품 정보 수정 시간',
     example: '2024-01-10T15:30:00.000Z'
   })
-  updatedAt: Date;
+  updatedAt!: Date;
 
   /**
    * Product 엔티티를 ProductResponseDto로 변환합니다.
@@ -101,43 +101,43 @@ export class PaginatedProductResponseDto {
     description: '현재 페이지의 상품 목록',
     type: [ProductResponseDto]
   })
-  data: ProductResponseDto[];
+  data!: ProductResponseDto[];
 
   @ApiProperty({
     description: '전체 상품 수',
     example: 250
   })
-  total: number;
+  total!: number;
 
   @ApiProperty({
     description: '현재 페이지 번호',
     example: 1
   })
-  page: number;
+  page!: number;
 
   @ApiProperty({
     description: '페이지당 상품 수',
     example: 10
   })
-  limit: number;
+  limit!: number;
 
   @ApiProperty({
     description: '전체 페이지 수',
     example: 25
   })
-  totalPages: number;
+  totalPages!: number;
 
   @ApiProperty({
     description: '이전 페이지 존재 여부',
     example: false
   })
-  hasPrevious: boolean;
+  hasPrevious!: boolean;
 
   @ApiProperty({
     description: '다음 페이지 존재 여부',
     example: true
   })
-  hasNext: boolean;
+  hasNext!: boolean;
 
   static create(
     data: ProductResponseDto[],

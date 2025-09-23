@@ -8,7 +8,7 @@ import {
   BeforeUpdate,
   Index
 } from 'typeorm';
-import bcrypt from 'bcrypt';
+import * as bcrypt from 'bcrypt';
 
 /**
  * User 엔티티 - 사용자 정보를 저장하는 데이터베이스 테이블의 구조를 정의합니다.
@@ -29,7 +29,7 @@ export class User {
    * 자동으로 증가하는 숫자이므로 개발자가 직접 값을 지정할 필요가 없습니다.
    */
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   /**
    * 이메일 주소 - 사용자의 로그인 ID 역할을 합니다.
@@ -42,7 +42,7 @@ export class User {
     length: 255,
     comment: '사용자 이메일 주소 (로그인 ID)' 
   })
-  email: string;
+  email!: string;
 
   /**
    * 사용자의 실제 이름입니다.
@@ -54,7 +54,7 @@ export class User {
     length: 100,
     comment: '사용자 실명' 
   })
-  name: string;
+  name!: string;
 
   /**
    * 비밀번호 - 보안을 위해 해시화되어 저장됩니다.
@@ -67,7 +67,7 @@ export class User {
     length: 255,
     comment: '암호화된 비밀번호' 
   })
-  password: string;
+  password!: string;
 
   /**
    * 사용자의 역할을 나타냅니다.
@@ -81,7 +81,7 @@ export class User {
     default: 'user',
     comment: '사용자 권한 레벨'
   })
-  role: 'user' | 'admin' | 'moderator';
+  role!: 'user' | 'admin' | 'moderator';
 
   /**
    * 계정 활성화 상태입니다.
@@ -94,7 +94,7 @@ export class User {
     default: true,
     comment: '계정 활성화 여부' 
   })
-  isActive: boolean;
+  isActive!: boolean;
 
   /**
    * 이메일 인증 완료 여부입니다.
@@ -106,7 +106,7 @@ export class User {
     default: false,
     comment: '이메일 인증 완료 여부' 
   })
-  isEmailVerified: boolean;
+  isEmailVerified!: boolean;
 
   /**
    * 마지막 로그인 시간입니다.
@@ -119,7 +119,7 @@ export class User {
     nullable: true,
     comment: '마지막 로그인 시간'
   })
-  lastLoginAt: Date;
+  lastLoginAt!: Date;
 
   /**
    * 레코드 생성 시간 - 자동으로 현재 시간이 설정됩니다.
@@ -131,7 +131,7 @@ export class User {
     name: 'created_at',
     comment: '계정 생성 시간'
   })
-  createdAt: Date;
+  createdAt!: Date;
 
   /**
    * 레코드 수정 시간 - 업데이트될 때마다 자동으로 갱신됩니다.
@@ -143,7 +143,7 @@ export class User {
     name: 'updated_at',
     comment: '정보 수정 시간'
   })
-  updatedAt: Date;
+  updatedAt!: Date;
 
   /**
    * 엔티티가 데이터베이스에 저장되기 전에 실행되는 메서드입니다.

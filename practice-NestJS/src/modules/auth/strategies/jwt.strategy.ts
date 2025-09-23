@@ -27,12 +27,15 @@ import { User } from '../../../database/entities/user.entity';
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
-    private configService: ConfigService,
+    configService: ConfigService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
   ) {
     // 부모 클래스(PassportStrategy)의 생성자를 호출하면서
     // JWT 토큰 검증에 필요한 설정을 전달합니다.
+    // configService를 사용하여 환경 변수에서 JWT 비밀키를 가져옵니다.
+    const jwtSecret = configService.get<string>('JWT_SECRET');
+    
     super({
       // 1. JWT 토큰을 어디서 추출할 것인가?
       // Bearer 토큰 형태로 Authorization 헤더에서 추출합니다.
@@ -47,7 +50,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       // 3. JWT 서명 검증에 사용할 비밀키는 무엇인가?
       // 이 키는 토큰이 생성될 때 사용된 키와 동일해야 합니다.
       // 키가 다르면 토큰이 위조된 것으로 간주됩니다.
-      secretOrKey: configService.get<string>('JWT_SECRET'),
+      secretOrKey: jwtSecret,
     });
   }
 
@@ -67,7 +70,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
    * 계정이 활성화되어 있는지 등을 추가로 확인해야 합니다.
    * 이는 토큰 발급 후 사용자가 삭제되거나 비활성화될 수 있기 때문입니다.
    */
-  async validate(payload: any) {
+  async validate(payload: { sub: number; email: string; role: string; iat: number; exp: number }) {
     // payload.sub는 JWT 표준에 따라 subject(주체), 즉 사용자 ID를 의미합니다.
     // 토큰을 생성할 때 사용자 ID를 sub 필드에 저장하는 것이 일반적입니다.
     const userId = payload.sub;
@@ -100,8 +103,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     // 마지막 로그인 시간을 업데이트합니다.
     // 이는 사용자의 활동을 추적하고 보안 모니터링에 도움이 됩니다.
     // 예를 들어, 의심스러운 로그인 패턴을 감지할 수 있습니다.
-    user.lastLoginAt = new Date();
-    await this.userRepository.save(user);
+    const now = new Date();
+    if (!user.lastLoginAt || now.getTime() - user.lastLoginAt.getTime() > 60000) {
+      user.lastLoginAt = now;
+      await this.userRepository.save(user);
+    }
 
     // 모든 검증을 통과한 사용자 정보를 반환합니다.
     // 이 정보는 request.user에 저장되어 컨트롤러에서 사용할 수 있게 됩니다.

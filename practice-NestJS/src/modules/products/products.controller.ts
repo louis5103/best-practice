@@ -128,13 +128,13 @@ export class ProductsController {
     type: PaginatedProductResponseDto
   })
   async findAll(
-    @Query('page', ParseIntPipe) page: number = 1,
-    @Query('limit', ParseIntPipe) limit: number = 10,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
     @Query('category') category?: string
   ): Promise<PaginatedProductResponseDto> {
-    // 페이지네이션 제한 적용
-    const validatedLimit = Math.min(Math.max(limit, 1), 50);
-    const validatedPage = Math.max(page, 1);
+    // 매개변수 변환 및 검증
+    const validatedPage = Math.max(parseInt(page ?? '1') || 1, 1);
+    const validatedLimit = Math.min(Math.max(parseInt(limit ?? '10') || 10, 1), 50);
 
     this.logger.log(
       `상품 목록 조회: 페이지 ${validatedPage}, 한계 ${validatedLimit}` +

@@ -4,7 +4,6 @@ import {
   UnauthorizedException,
   Logger
 } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
@@ -30,7 +29,7 @@ import { Reflector } from '@nestjs/core';
  * 사용하는 것이 일반적입니다.
  */
 @Injectable()
-export class CustomJwtAuthGuard implements AuthGuard {
+export class CustomJwtAuthGuard {
   private readonly logger = new Logger(CustomJwtAuthGuard.name);
 
   constructor(
@@ -85,14 +84,16 @@ export class CustomJwtAuthGuard implements AuthGuard {
       this.logger.debug(`사용자 인증 성공: ${payload.email} (ID: ${payload.sub})`);
       return true;
 
-    } catch (error) {
-      this.logger.error(`JWT 토큰 검증 실패: ${error.message}. IP: ${request.ip}`);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+      const errorName = error instanceof Error ? (error as any).name : null;
+      this.logger.error(`JWT 토큰 검증 실패: ${errorMessage}. IP: ${request.ip}`);
 
-      if (error.name === 'JsonWebTokenError') {
+      if (errorName === 'JsonWebTokenError') {
         throw new UnauthorizedException('유효하지 않은 토큰입니다.');
-      } else if (error.name === 'TokenExpiredError') {
+      } else if (errorName === 'TokenExpiredError') {
         throw new UnauthorizedException('토큰이 만료되었습니다. 다시 로그인해 주세요.');
-      } else if (error.name === 'NotBeforeError') {
+      } else if (errorName === 'NotBeforeError') {
         throw new UnauthorizedException('토큰이 아직 활성화되지 않았습니다.');
       } else {
         throw new UnauthorizedException('토큰 인증에 실패했습니다.');

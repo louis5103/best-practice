@@ -6,7 +6,6 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { RedisService } from '@liaoliaots/nestjs-redis';
 
 import { Product } from '../../database/entities/product.entity';
 import {
@@ -33,8 +32,7 @@ export class ProductsService {
 
   constructor(
     @InjectRepository(Product)
-    private readonly productRepository: Repository<Product>,
-    private readonly redisService: RedisService
+    private readonly productRepository: Repository<Product>
   ) {}
 
   /**
@@ -52,8 +50,10 @@ export class ProductsService {
 
       return ProductResponseDto.fromEntity(savedProduct);
 
-    } catch (error) {
-      this.logger.error(`상품 생성 중 오류 발생: ${error.message}`, error.stack);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`상품 생성 중 오류 발생: ${errorMessage}`, errorStack);
       throw new BadRequestException('상품 생성 중 오류가 발생했습니다.');
     }
   }
@@ -98,8 +98,10 @@ export class ProductsService {
 
       return result;
 
-    } catch (error) {
-      this.logger.error(`상품 목록 조회 중 오류 발생: ${error.message}`, error.stack);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`상품 목록 조회 중 오류 발생: ${errorMessage}`, errorStack);
       throw new BadRequestException('상품 목록 조회 중 오류가 발생했습니다.');
     }
   }
@@ -121,12 +123,14 @@ export class ProductsService {
 
       return ProductResponseDto.fromEntity(product);
 
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof NotFoundException) {
         throw error;
       }
 
-      this.logger.error(`상품 조회 중 오류 발생 (ID: ${id}): ${error.message}`, error.stack);
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`상품 조회 중 오류 발생 (ID: ${id}): ${errorMessage}`, errorStack);
       throw new BadRequestException('상품 조회 중 오류가 발생했습니다.');
     }
   }
@@ -155,12 +159,14 @@ export class ProductsService {
 
       return ProductResponseDto.fromEntity(updatedProduct);
 
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof NotFoundException) {
         throw error;
       }
 
-      this.logger.error(`상품 수정 중 오류 발생 (ID: ${id}): ${error.message}`, error.stack);
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`상품 수정 중 오류 발생 (ID: ${id}): ${errorMessage}`, errorStack);
       throw new BadRequestException('상품 수정 중 오류가 발생했습니다.');
     }
   }
@@ -184,12 +190,14 @@ export class ProductsService {
 
       this.logger.log(`상품 삭제 완료: ID ${id} (${product.name})`);
 
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof NotFoundException) {
         throw error;
       }
 
-      this.logger.error(`상품 삭제 중 오류 발생 (ID: ${id}): ${error.message}`, error.stack);
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`상품 삭제 중 오류 발생 (ID: ${id}): ${errorMessage}`, errorStack);
       throw new BadRequestException('상품 삭제 중 오류가 발생했습니다.');
     }
   }

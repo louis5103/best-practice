@@ -3,13 +3,12 @@ import {
   NotFoundException, 
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   Logger
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
 import { RedisService } from '@liaoliaots/nestjs-redis';
-import bcrypt from 'bcrypt';
+import * as bcrypt from 'bcrypt';
 
 import { User } from '../../database/entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -86,12 +85,14 @@ export class UsersService {
 
       return UserResponseDto.fromEntity(savedUser);
 
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof ConflictException) {
         throw error;
       }
 
-      this.logger.error(`사용자 생성 중 오류 발생: ${error.message}`, error.stack);
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`사용자 생성 중 오류 발생: ${errorMessage}`, errorStack);
       throw new BadRequestException('사용자 생성 중 오류가 발생했습니다.');
     }
   }
@@ -143,8 +144,10 @@ export class UsersService {
 
       return result;
 
-    } catch (error) {
-      this.logger.error(`사용자 목록 조회 중 오류 발생: ${error.message}`, error.stack);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`사용자 목록 조회 중 오류 발생: ${errorMessage}`, errorStack);
       throw new BadRequestException('사용자 목록 조회 중 오류가 발생했습니다.');
     }
   }
@@ -171,12 +174,14 @@ export class UsersService {
 
       return UserResponseDto.fromEntity(user);
 
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof NotFoundException) {
         throw error;
       }
 
-      this.logger.error(`사용자 조회 중 오류 발생 (ID: ${id}): ${error.message}`, error.stack);
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`사용자 조회 중 오류 발생 (ID: ${id}): ${errorMessage}`, errorStack);
       throw new BadRequestException('사용자 조회 중 오류가 발생했습니다.');
     }
   }
@@ -197,8 +202,10 @@ export class UsersService {
 
       return user;
 
-    } catch (error) {
-      this.logger.error(`이메일로 사용자 조회 중 오류 발생 (${email}): ${error.message}`, error.stack);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`이메일로 사용자 조회 중 오류 발생 (${email}): ${errorMessage}`, errorStack);
       return null;
     }
   }
@@ -249,12 +256,14 @@ export class UsersService {
 
       return UserResponseDto.fromEntity(updatedUser);
 
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof NotFoundException || error instanceof ConflictException) {
         throw error;
       }
 
-      this.logger.error(`사용자 수정 중 오류 발생 (ID: ${id}): ${error.message}`, error.stack);
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`사용자 수정 중 오류 발생 (ID: ${id}): ${errorMessage}`, errorStack);
       throw new BadRequestException('사용자 수정 중 오류가 발생했습니다.');
     }
   }
@@ -294,12 +303,14 @@ export class UsersService {
 
       this.logger.log(`비밀번호 변경 완료: 사용자 ID ${id}`);
 
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof NotFoundException || error instanceof BadRequestException) {
         throw error;
       }
 
-      this.logger.error(`비밀번호 변경 중 오류 발생 (ID: ${id}): ${error.message}`, error.stack);
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`비밀번호 변경 중 오류 발생 (ID: ${id}): ${errorMessage}`, errorStack);
       throw new BadRequestException('비밀번호 변경 중 오류가 발생했습니다.');
     }
   }
@@ -324,12 +335,14 @@ export class UsersService {
 
       this.logger.log(`사용자 삭제 완료: ID ${id} (${user.email})`);
 
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof NotFoundException) {
         throw error;
       }
 
-      this.logger.error(`사용자 삭제 중 오류 발생 (ID: ${id}): ${error.message}`, error.stack);
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`사용자 삭제 중 오류 발생 (ID: ${id}): ${errorMessage}`, errorStack);
       throw new BadRequestException('사용자 삭제 중 오류가 발생했습니다.');
     }
   }
@@ -406,8 +419,10 @@ export class UsersService {
 
       return stats;
 
-    } catch (error) {
-      this.logger.error(`사용자 통계 조회 중 오류 발생: ${error.message}`, error.stack);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`사용자 통계 조회 중 오류 발생: ${errorMessage}`, errorStack);
       throw new BadRequestException('사용자 통계 조회 중 오류가 발생했습니다.');
     }
   }
@@ -421,8 +436,9 @@ export class UsersService {
     try {
       const redis = this.redisService.getOrThrow();
       await redis.del(this.CACHE_KEYS.USER_STATS);
-    } catch (error) {
-      this.logger.warn(`통계 캐시 무효화 실패: ${error.message}`);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+      this.logger.warn(`통계 캐시 무효화 실패: ${errorMessage}`);
     }
   }
 }

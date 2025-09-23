@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
+import { Observable } from 'rxjs';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 
 /**
@@ -45,7 +46,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
    * HTTP 요청의 경우 request, response 객체뿐만 아니라
    * 현재 처리 중인 컨트롤러, 메서드에 대한 정보도 포함하고 있습니다.
    */
-  canActivate(context: ExecutionContext): boolean | Promise<boolean> {
+  canActivate(context: ExecutionContext): boolean | Promise<boolean> | Observable<boolean> {
     // 1단계: 공개 엔드포인트 확인
     // 현재 처리 중인 메서드나 클래스에 @Public() 데코레이터가 있는지 확인합니다.
     // 이는 마치 "VIP 전용" 표시가 없는 공개 구역을 찾는 것과 같습니다.
@@ -88,6 +89,11 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     // 이는 Spring Security에서 AuthenticationEntryPoint가 하는 역할과 유사합니다.
     // 인증되지 않은 요청에 대해 일관된 에러 응답을 제공하는 것입니다.
     if (err || !user) {
+      // info 파라미터에는 JWT 검증 과정에서의 추가 정보가 들어있습니다.
+      // 개발 환경에서 디버깅을 위해 로그를 남깁니다.
+      if (info && process.env.NODE_ENV === 'development') {
+        console.log('JWT 인증 정보:', info);
+      }
       throw err || new UnauthorizedException('인증이 필요합니다.');
     }
     

@@ -1,4 +1,4 @@
-import Joi from 'joi';
+import * as Joi from 'joi';
 
 /**
  * 환경 변수 검증 스키마입니다.

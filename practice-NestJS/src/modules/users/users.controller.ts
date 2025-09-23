@@ -162,8 +162,8 @@ export class UsersController {
     const currentUser = (req as any).user;
     
     // 매개변수 변환 및 검증
-    const validatedPage = Math.max(parseInt(page) || 1, 1);
-    const validatedLimit = Math.min(Math.max(parseInt(limit) || 10, 1), 50);
+    const validatedPage = Math.max(parseInt(page ?? '1') || 1, 1);
+    const validatedLimit = Math.min(Math.max(parseInt(limit ?? '10') || 10, 1), 50);
     const searchTerm = search || undefined;
 
     this.logger.log(
@@ -292,7 +292,9 @@ export class UsersController {
     // 일반 사용자는 민감한 필드 수정 불가
     if (currentUser.role !== 'admin') {
       const restrictedFields = ['role', 'isActive', 'isEmailVerified'];
-      const hasRestrictedField = restrictedFields.some(field => updateUserDto[field] !== undefined);
+      const hasRestrictedField = restrictedFields.some(field => 
+        field in updateUserDto && (updateUserDto as any)[field] !== undefined
+      );
       
       if (hasRestrictedField) {
         this.logger.warn(
