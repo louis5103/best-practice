@@ -1,10 +1,14 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 
 /**
  * 시스템 건강 상태를 체크하는 핵심 서비스입니다.
+ * 
+ * ✨ 개선사항: Redis 캐싱 시스템 상태 확인 추가
  */
 @Injectable()
 export class HealthService {
@@ -14,6 +18,7 @@ export class HealthService {
   constructor(
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly configService: ConfigService,
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache
   ) {}
 
   /**
@@ -30,10 +35,12 @@ export class HealthService {
         databaseResult,
         memoryResult,
         diskResult,
+        cacheResult,
       ] = await Promise.allSettled([
         this.checkDatabaseHealth(),
         this.checkMemoryHealth(),
         this.checkDiskHealth(),
+        this.checkCacheHealth(), // Redis 캐시 상태 확인 추가
       ]);
 
       // 각 검사 결과를 처리합니다.
@@ -73,8 +80,21 @@ export class HealthService {
         });
       }
 
+      // Redis/캐시 상태 확인 결과 처리
+      if (cacheResult.status === 'fulfilled') {
+        checks['cache'] = cacheResult.value;
+      } else {
+        const error = cacheResult.reason;
+        const errorMessage = error instanceof Error ? error.message : '캐시 시스템 확인 실패';
+        checks['cache'] = { status: 'warning', error: errorMessage };
+        // 캐시는 선택적 의존성이므로 경고 수준으로 처리
+        this.logger.warn(`캐시 상태 확인 실패: ${errorMessage}`);
+      }
+
       // 전체 시스템 상태를 결정합니다.
-      const overallStatus = errors.length > 0 ? 'error' : 'ok';
+      // 캐시 실패는 에러로 계산하지 않음 (선택적 의존성)
+      const criticalErrors = errors.filter(e => e.service !== 'cache');
+      const overallStatus = criticalErrors.length > 0 ? 'error' : 'ok';
 
       const result: any = {
         status: overallStatus,
@@ -170,6 +190,70 @@ export class HealthService {
   }
 
   /**
+   * 캐시 시스템 (Redis) 상태를 확인합니다.
+   * 
+   * ✨ 새로 추가된 기능: Redis 캐싱 시스템 상태 확인
+   */
+  private async checkCacheHealth() {
+    const startTime = Date.now();
+    const testKey = 'health-check-test';
+    const testValue = { timestamp: Date.now(), test: true };
+
+    try {
+      // 캐시 쓰기 테스트
+      await this.cacheManager.set(testKey, testValue, 10); // 10초 TTL
+
+      // 캐시 읽기 테스트
+      const retrievedValue = await this.cacheManager.get(testKey);
+
+      // 캐시 삭제 테스트 (정리)
+      await this.cacheManager.del(testKey);
+
+      const responseTime = Date.now() - startTime;
+
+      // 읽기/쓰기가 성공했는지 확인
+      if (retrievedValue) {
+        return {
+          status: 'up',
+          responseTime,
+          type: 'cache-manager',
+          operations: {
+            write: 'success',
+            read: 'success',
+            delete: 'success'
+          },
+          message: '캐시 시스템 정상 작동'
+        };
+      } else {
+        return {
+          status: 'warning',
+          responseTime,
+          type: 'cache-manager',
+          operations: {
+            write: 'success',
+            read: 'failed',
+            delete: 'success'
+          },
+          message: '캐시 읽기 실패, 하지만 연결은 정상'
+        };
+      }
+
+    } catch (error: unknown) {
+      const responseTime = Date.now() - startTime;
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 캐시 오류';
+      
+      // 캐시 실패는 심각하지 않으므로 경고 수준으로 처리
+      return {
+        status: 'down',
+        responseTime,
+        type: 'cache-manager',
+        error: errorMessage,
+        message: '캐시 시스템 연결 실패 (메모리 캐시로 fallback 가능)'
+      };
+    }
+  }
+
+  /**
    * 메모리 사용량을 확인합니다.
    */
   private async checkMemoryHealth() {
@@ -212,7 +296,6 @@ export class HealthService {
     try {
       const fs = require('fs');
       
-      // Node.js에서 statvfs는 일부 시스템에서만 지원되므로 대안 사용
       // 실제 파일을 생성하여 디스크 쓰기 가능 여부 확인
       try {
         const testPath = require('path').join(process.cwd(), '.health-check-temp');

@@ -3,10 +3,13 @@ import {
   NotFoundException, 
   BadRequestException,
   ConflictException,
-  Logger
+  Logger,
+  Inject
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import * as bcrypt from 'bcrypt';
 
 import { User } from '../../database/entities/user.entity';
@@ -18,18 +21,34 @@ import { UserResponseDto, PaginatedUserResponseDto, UserStatsDto } from './dto/u
 /**
  * 사용자 관리 서비스입니다.
  * 
- * ✨ 개선사항: 
- * - Redis 의존성 제거로 더 단순하고 안정적인 구조
- * - TypeScript strict 모드 완전 호환
- * - 타입 안전성 완전 보장
+ * ✨ 표준 NestJS 캐싱 시스템 도입:
+ * - @nestjs/cache-manager 활용
+ * - 안정적인 에러 핸들링과 graceful degradation
+ * - 실무에서 검증된 캐싱 전략 적용
  */
 @Injectable()
 export class UsersService {
   private readonly logger = new Logger(UsersService.name);
 
+  // 캐시 키 상수 정의
+  private readonly CACHE_KEYS = {
+    USER_STATS: 'users:stats',
+    USER_LIST: 'users:list',
+    USER_BY_ID: 'users:by-id',
+  } as const;
+
+  // 캐시 TTL 설정 (초 단위)
+  private readonly CACHE_TTL = {
+    USER_STATS: 300,      // 5분 - 통계는 실시간일 필요 없음
+    USER_LIST: 60,        // 1분 - 목록은 자주 변경될 수 있음
+    USER_DETAIL: 300,     // 5분 - 개별 사용자 정보
+  } as const;
+
   constructor(
     @InjectRepository(User)
-    private readonly userRepository: Repository<User>
+    private readonly userRepository: Repository<User>,
+    @Inject(CACHE_MANAGER)
+    private readonly cacheManager: Cache
   ) {}
 
   /**
@@ -49,12 +68,12 @@ export class UsersService {
         throw new ConflictException('이미 사용 중인 이메일 주소입니다.');
       }
 
-      // 새로운 사용자 엔티티 생성 - 타입 안전하게 수정
+      // 새로운 사용자 엔티티 생성
       const userData = {
         email,
         name,
         password,
-        role: (role || UserRole.USER) as UserRole, // 명시적 타입 캐스팅
+        role: (role || UserRole.USER) as UserRole,
         isActive: isActive !== undefined ? isActive : true,
         isEmailVerified: isEmailVerified !== undefined ? isEmailVerified : false
       };
@@ -63,6 +82,9 @@ export class UsersService {
 
       // 데이터베이스에 저장
       const savedUser = await this.userRepository.save(newUser);
+
+      // 관련 캐시 무효화 (사용자 추가로 인한 변경사항 반영)
+      await this.invalidateUserCaches();
 
       this.logger.log(`사용자 생성 성공: ${email} (ID: ${savedUser.id})`);
 
@@ -82,13 +104,25 @@ export class UsersService {
 
   /**
    * 페이지네이션을 적용하여 사용자 목록을 조회합니다.
+   * 
+   * 캐싱 전략: 자주 변경되는 목록이므로 짧은 TTL 적용
    */
   async findAll(
     page: number = 1, 
     limit: number = 10, 
     search?: string
   ): Promise<PaginatedUserResponseDto> {
+    // 캐시 키 생성 (파라미터 포함)
+    const cacheKey = `${this.CACHE_KEYS.USER_LIST}:${page}:${limit}:${search || 'all'}`;
+
     try {
+      // 캐시에서 먼저 확인 (안전한 방식)
+      const cachedResult = await this.safeGetFromCache<PaginatedUserResponseDto>(cacheKey);
+      if (cachedResult) {
+        this.logger.debug(`사용자 목록 캐시 히트: ${cacheKey}`);
+        return cachedResult;
+      }
+
       // 데이터베이스 쿼리 빌드
       let queryBuilder: SelectQueryBuilder<User> = this.userRepository
         .createQueryBuilder('user')
@@ -120,6 +154,9 @@ export class UsersService {
       const userDtos = UserResponseDto.fromEntities(users);
       const result = PaginatedUserResponseDto.create(userDtos, total, page, limit);
 
+      // 캐시에 저장 (안전한 방식)
+      await this.safeSetCache(cacheKey, result, this.CACHE_TTL.USER_LIST);
+
       this.logger.debug(`사용자 목록 조회 완료: ${users.length}명 (총 ${total}명)`);
 
       return result;
@@ -134,9 +171,20 @@ export class UsersService {
 
   /**
    * ID로 특정 사용자를 조회합니다.
+   * 
+   * 캐싱 전략: 개별 사용자 정보는 상대적으로 안정적이므로 중간 TTL 적용
    */
   async findOne(id: number): Promise<UserResponseDto> {
+    const cacheKey = `${this.CACHE_KEYS.USER_BY_ID}:${id}`;
+
     try {
+      // 캐시에서 먼저 확인
+      const cachedUser = await this.safeGetFromCache<UserResponseDto>(cacheKey);
+      if (cachedUser) {
+        this.logger.debug(`사용자 상세 캐시 히트: ${id}`);
+        return cachedUser;
+      }
+
       const user = await this.userRepository.findOne({
         where: { id },
         select: [
@@ -149,7 +197,12 @@ export class UsersService {
         throw new NotFoundException(`ID ${id}에 해당하는 사용자를 찾을 수 없습니다.`);
       }
 
-      return UserResponseDto.fromEntity(user);
+      const result = UserResponseDto.fromEntity(user);
+
+      // 캐시에 저장
+      await this.safeSetCache(cacheKey, result, this.CACHE_TTL.USER_DETAIL);
+
+      return result;
 
     } catch (error: unknown) {
       if (error instanceof NotFoundException) {
@@ -165,10 +218,11 @@ export class UsersService {
 
   /**
    * 이메일로 사용자를 조회합니다.
+   * 
+   * 인증용이므로 캐싱하지 않음 (보안상 이유)
    */
   async findByEmail(email: string): Promise<User | null> {
     try {
-      // 이 메서드는 인증에 사용되므로 비밀번호도 함께 조회
       const user = await this.userRepository
         .createQueryBuilder('user')
         .addSelect('user.password')
@@ -208,7 +262,7 @@ export class UsersService {
         }
       }
 
-      // 업데이트 실행 - 타입 안전한 방식
+      // 업데이트 실행
       const updateData: Partial<User> = {};
       
       if (updateUserDto.email !== undefined) updateData.email = updateUserDto.email;
@@ -231,6 +285,9 @@ export class UsersService {
       if (!updatedUser) {
         throw new NotFoundException('사용자 업데이트 후 조회에 실패했습니다.');
       }
+
+      // 관련 캐시 무효화
+      await this.invalidateUserCaches(id);
 
       this.logger.log(`사용자 정보 수정 완료: ID ${id}`);
 
@@ -291,7 +348,7 @@ export class UsersService {
       const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
       const errorStack = error instanceof Error ? error.stack : undefined;
       this.logger.error(`비밀번호 변경 중 오류 발생 (ID: ${id}): ${errorMessage}`, errorStack);
-      throw new BadRequestException('비밀번호 변경 중 오류가 발생했습니다.');
+      throw new BadRequestException('비밀번로 변경 중 오류가 발생했습니다.');
     }
   }
 
@@ -310,6 +367,9 @@ export class UsersService {
       // 삭제 실행
       await this.userRepository.delete(id);
 
+      // 관련 캐시 무효화
+      await this.invalidateUserCaches(id);
+
       this.logger.log(`사용자 삭제 완료: ID ${id} (${user.email})`);
 
     } catch (error: unknown) {
@@ -326,11 +386,21 @@ export class UsersService {
 
   /**
    * 사용자 통계 정보를 조회합니다.
-   * Redis 캐싱 제거로 더 단순하고 신뢰할 수 있는 구현
+   * 
+   * 캐싱 전략: 통계 계산은 비용이 높으므로 적극적으로 캐싱
    */
   async getStats(): Promise<UserStatsDto> {
+    const cacheKey = this.CACHE_KEYS.USER_STATS;
+
     try {
-      // 데이터베이스에서 직접 통계 계산
+      // 캐시에서 먼저 확인
+      const cachedStats = await this.safeGetFromCache<UserStatsDto>(cacheKey);
+      if (cachedStats) {
+        this.logger.debug('사용자 통계 캐시 히트');
+        return cachedStats;
+      }
+
+      // 데이터베이스에서 통계 계산
       const [
         totalUsers,
         activeUsers,
@@ -338,24 +408,15 @@ export class UsersService {
         usersByRole,
         newUsersLastWeek
       ] = await Promise.all([
-        // 전체 사용자 수
         this.userRepository.count(),
-        
-        // 활성화된 사용자 수
         this.userRepository.count({ where: { isActive: true } }),
-        
-        // 이메일 인증 완료 사용자 수
         this.userRepository.count({ where: { isEmailVerified: true } }),
-        
-        // 역할별 사용자 수
         this.userRepository
           .createQueryBuilder('user')
           .select('user.role', 'role')
           .addSelect('COUNT(*)', 'count')
           .groupBy('user.role')
           .getRawMany(),
-        
-        // 최근 7일간 신규 사용자 수
         this.userRepository
           .createQueryBuilder('user')
           .where('user.createdAt >= :weekAgo', {
@@ -379,6 +440,11 @@ export class UsersService {
         newUsersLastWeek: parseInt(newUsersLastWeek.toString())
       };
 
+      // 캐시에 저장
+      await this.safeSetCache(cacheKey, stats, this.CACHE_TTL.USER_STATS);
+
+      this.logger.debug('사용자 통계 계산 완료 및 캐싱');
+
       return stats;
 
     } catch (error: unknown) {
@@ -386,6 +452,50 @@ export class UsersService {
       const errorStack = error instanceof Error ? error.stack : undefined;
       this.logger.error(`사용자 통계 조회 중 오류 발생: ${errorMessage}`, errorStack);
       throw new BadRequestException('사용자 통계 조회 중 오류가 발생했습니다.');
+    }
+  }
+
+  /**
+   * 캐시에서 안전하게 데이터를 가져옵니다.
+   * 
+   * 캐시 오류가 발생해도 애플리케이션이 중단되지 않도록 처리
+   */
+  private async safeGetFromCache<T>(key: string): Promise<T | null> {
+    try {
+      return await this.cacheManager.get<T>(key);
+    } catch (error) {
+      this.logger.warn(`캐시 조회 실패 (키: ${key}):`, error);
+      return null;
+    }
+  }
+
+  /**
+   * 캐시에 안전하게 데이터를 저장합니다.
+   */
+  private async safeSetCache<T>(key: string, value: T, ttl: number): Promise<void> {
+    try {
+      await this.cacheManager.set(key, value, ttl);
+    } catch (error) {
+      this.logger.warn(`캐시 저장 실패 (키: ${key}):`, error);
+    }
+  }
+
+  /**
+   * 사용자 관련 캐시들을 무효화합니다.
+   */
+  private async invalidateUserCaches(userId?: number): Promise<void> {
+    try {
+      // 전체 사용자 관련 캐시 무효화
+      await Promise.allSettled([
+        this.cacheManager.del(this.CACHE_KEYS.USER_STATS),
+        // 사용자 목록 캐시들 (패턴 매칭으로 삭제하기 어려우므로 시간 기반으로 만료)
+        // 개별 사용자 캐시 (특정 사용자가 있는 경우)
+        userId ? this.cacheManager.del(`${this.CACHE_KEYS.USER_BY_ID}:${userId}`) : Promise.resolve(),
+      ]);
+
+      this.logger.debug('사용자 캐시 무효화 완료');
+    } catch (error) {
+      this.logger.warn('캐시 무효화 실패:', error);
     }
   }
 }
