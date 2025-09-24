@@ -1,8 +1,15 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Exclude } from 'class-transformer';
+import { UserRole } from '../../../common/types';
+import { User } from '../../../database/entities/user.entity';
 
 /**
  * 사용자 응답 DTO입니다.
+ * 
+ * ✨ 최신 개선사항:
+ * - 공통 타입 시스템의 UserRole enum 활용
+ * - User 엔티티와 완벽하게 일치하는 필드 구조
+ * - 타입 안전성과 코드 일관성 향상
  * 
  * 이 DTO는 사용자 정보를 클라이언트에게 안전하게 전달하기 위한 구조체입니다.
  * 민감한 정보(비밀번호 등)는 제외하고 필요한 정보만을 포함합니다.
@@ -40,13 +47,18 @@ export class UserResponseDto {
 
   /**
    * 사용자 권한 레벨입니다.
+   * 
+   * ✨ 개선사항: 공통 타입 시스템의 UserRole enum 사용
+   * - 타입 안전성 보장
+   * - 권한 관리 시스템과 완벽하게 통합
+   * - 중복 코드 제거
    */
   @ApiProperty({
     description: '사용자 역할',
-    example: 'user',
-    enum: ['user', 'moderator', 'admin']
+    example: UserRole.USER,
+    enum: UserRole
   })
-  role!: 'user' | 'moderator' | 'admin';
+  role!: UserRole;
 
   /**
    * 계정 활성화 상태입니다.
@@ -75,7 +87,8 @@ export class UserResponseDto {
     description: '마지막 로그인 시간',
     example: '2024-01-15T10:30:00.000Z',
     type: 'string',
-    format: 'date-time'
+    format: 'date-time',
+    nullable: true
   })
   lastLoginAt?: Date;
 
@@ -120,7 +133,7 @@ export class UserResponseDto {
    * @param user User 엔티티
    * @returns UserResponseDto 안전한 사용자 응답 객체
    */
-  static fromEntity(user: any): UserResponseDto {
+  static fromEntity(user: User): UserResponseDto {
     const dto = new UserResponseDto();
     dto.id = user.id;
     dto.email = user.email;
@@ -143,7 +156,7 @@ export class UserResponseDto {
    * @param users User 엔티티 배열
    * @returns UserResponseDto[] 안전한 사용자 응답 객체 배열
    */
-  static fromEntities(users: any[]): UserResponseDto[] {
+  static fromEntities(users: User[]): UserResponseDto[] {
     return users.map(user => this.fromEntity(user));
   }
 }
@@ -207,7 +220,7 @@ export class PaginatedUserResponseDto {
     description: '이전 페이지 존재 여부',
     example: false
   })
-  hasPrevious!: boolean;
+  hasPreviousPage!: boolean;
 
   /**
    * 다음 페이지 존재 여부입니다.
@@ -216,7 +229,7 @@ export class PaginatedUserResponseDto {
     description: '다음 페이지 존재 여부',
     example: true
   })
-  hasNext!: boolean;
+  hasNextPage!: boolean;
 
   /**
    * 페이지네이션 정보를 포함한 응답 객체를 생성하는 정적 메서드입니다.
@@ -235,15 +248,16 @@ export class PaginatedUserResponseDto {
   ): PaginatedUserResponseDto {
     const totalPages = Math.ceil(total / limit);
     
-    return {
-      data,
-      total,
-      page,
-      limit,
-      totalPages,
-      hasPrevious: page > 1,
-      hasNext: page < totalPages
-    };
+    const result = new PaginatedUserResponseDto();
+    result.data = data;
+    result.total = total;
+    result.page = page;
+    result.limit = limit;
+    result.totalPages = totalPages;
+    result.hasPreviousPage = page > 1;
+    result.hasNextPage = page < totalPages;
+    
+    return result;
   }
 }
 
@@ -291,20 +305,18 @@ export class UserStatsDto {
 
   /**
    * 역할별 사용자 수입니다.
+   * 
+   * ✨ 개선사항: 공통 타입 시스템과 일치하는 구조
    */
   @ApiProperty({
     description: '역할별 사용자 수',
     example: {
-      user: 1200,
-      moderator: 40,
-      admin: 10
+      [UserRole.USER]: 1200,
+      [UserRole.MODERATOR]: 40,
+      [UserRole.ADMIN]: 10
     }
   })
-  usersByRole!: {
-    user: number;
-    moderator: number;
-    admin: number;
-  };
+  usersByRole!: Record<UserRole, number>;
 
   /**
    * 최근 7일간 가입한 사용자 수입니다.
@@ -314,4 +326,49 @@ export class UserStatsDto {
     example: 45
   })
   newUsersLastWeek!: number;
+}
+
+/**
+ * 간단한 사용자 정보 DTO입니다.
+ * 
+ * 댓글 작성자 정보 등에서 사용할 수 있는 경량 사용자 정보 DTO입니다.
+ */
+export class SimpleUserResponseDto {
+  @ApiProperty({
+    description: '사용자 고유 ID',
+    example: 1
+  })
+  id!: number;
+
+  @ApiProperty({
+    description: '사용자 이름',
+    example: '김철수'
+  })
+  name!: string;
+
+  @ApiProperty({
+    description: '사용자 역할',
+    example: UserRole.USER,
+    enum: UserRole
+  })
+  role!: UserRole;
+
+  /**
+   * User 엔티티를 SimpleUserResponseDto로 변환합니다.
+   */
+  static fromEntity(user: User): SimpleUserResponseDto {
+    const dto = new SimpleUserResponseDto();
+    dto.id = user.id;
+    dto.name = user.name;
+    dto.role = user.role;
+    
+    return dto;
+  }
+
+  /**
+   * 여러 User 엔티티를 SimpleUserResponseDto 배열로 변환합니다.
+   */
+  static fromEntities(users: User[]): SimpleUserResponseDto[] {
+    return users.map(user => this.fromEntity(user));
+  }
 }

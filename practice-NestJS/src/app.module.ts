@@ -2,58 +2,53 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
-import { RedisModule } from '@liaoliaots/nestjs-redis';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { ProductsModule } from './modules/products/products.module';
-import { validateEnvironmentVariables } from '@config/env-validation.schema';
+import { HealthModule } from './modules/health/health.module';
+import { validateEnvironmentVariables } from './config/env-validation.schema';
 
 /**
  * 애플리케이션의 루트 모듈입니다.
  * 
- * 이 모듈은 마치 건물의 설계도와 같은 역할을 합니다.
- * 모든 기능 모듈들을 하나로 연결하고, 전역 설정을 관리하며,
- * 의존성 주입 시스템의 최상위 컨테이너 역할을 수행합니다.
+ * ✨ 개선사항: 
+ * - 비표준 Redis 라이브러리 제거
+ * - 표준 NestJS 패턴만 사용
+ * - TypeScript strict 모드 완전 호환
+ * - 더 단순하고 안정적인 구조
  */
 @Module({
   imports: [
-    // 환경 변수 설정 모듈 - 전역에서 사용 가능하도록 isGlobal: true 설정
-    // 이렇게 하면 모든 모듈에서 ConfigService를 별도 import 없이 사용할 수 있습니다.
+    // 환경 변수 설정 모듈
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
-      // ✅ 환경 변수 검증 활성화 - 애플리케이션 시작 시 모든 필수 환경 변수 검증
       validate: validateEnvironmentVariables,
-      // 환경 변수 값을 캐시하여 성능 향상 (개발 환경에서는 false로 설정 가능)
       cache: process.env.NODE_ENV === 'production',
     }),
 
     // TypeORM 데이터베이스 연결 설정
-    // forRootAsync를 사용하는 이유는 ConfigService가 먼저 초기화되기를 기다렸다가
-    // 환경 변수 값들을 주입받아 설정을 구성하기 위해서입니다.
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        host: configService.get('DB_HOST'),
-        port: configService.get<number>('DB_PORT'),
-        username: configService.get('DB_USERNAME'),
-        password: configService.get('DB_PASSWORD'),
-        database: configService.get('DB_NAME'),
+        type: 'postgres' as const,
+        host: configService.get<string>('DB_HOST', 'localhost'),
+        port: configService.get<number>('DB_PORT', 5432),
+        username: configService.get<string>('DB_USERNAME', 'postgres'),
+        password: configService.get<string>('DB_PASSWORD', ''),
+        database: configService.get<string>('DB_NAME', 'practice_nestjs'),
         
         // 엔티티 파일들의 경로를 지정합니다.
-        // 이전 코드에서 발견한 오류를 수정했습니다: 올바른 상대 경로 사용
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         
         // 개발 환경에서만 synchronize를 true로 설정
-        // 프로덕션에서는 절대 true로 하면 안 됩니다! (데이터 손실 위험)
-        synchronize: configService.get('NODE_ENV') === 'development',
+        synchronize: configService.get<string>('NODE_ENV', 'development') === 'development',
         
         // SQL 쿼리 로깅 - 개발 중 디버깅에 유용
-        logging: configService.get('NODE_ENV') === 'development',
+        logging: configService.get<string>('NODE_ENV', 'development') === 'development',
         
         // 연결 풀 설정 - 성능 최적화를 위해
         extra: {
@@ -65,36 +60,14 @@ import { validateEnvironmentVariables } from '@config/env-validation.schema';
       inject: [ConfigService],
     }),
 
-    // Redis 설정 - 타입 이슈 해결을 위한 실무 표준 방식
-    RedisModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: (...args: any[]) => {
-        const configService = args[0] as ConfigService;
-        return {
-          readyLog: true,
-          config: {
-            host: configService.get<string>('REDIS_HOST', 'localhost'),
-            port: configService.get<number>('REDIS_PORT', 6379),
-            password: configService.get<string>('REDIS_PASSWORD'),
-            retryDelayOnFailover: 100,
-            maxRetriesPerRequest: 3,
-            lazyConnect: true,
-          },
-        };
-      },
-      inject: [ConfigService],
-    }),
-
     // JWT 전역 설정
-    // 이렇게 전역으로 설정하면 모든 모듈에서 JWT 서비스를 사용할 수 있습니다.
     JwtModule.registerAsync({
-      global: true, // 전역 모듈로 등록
+      global: true,
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
-        secret: configService.get('JWT_SECRET'),
+        secret: configService.get<string>('JWT_SECRET', 'default-secret-key'),
         signOptions: { 
-          expiresIn: configService.get('JWT_EXPIRES_IN') || '24h',
-          // JWT 추가 설정들
+          expiresIn: configService.get<string>('JWT_EXPIRES_IN', '24h'),
           issuer: 'practice-nestjs-api',
           audience: 'practice-nestjs-client',
         },
@@ -103,25 +76,21 @@ import { validateEnvironmentVariables } from '@config/env-validation.schema';
     }),
 
     // 기능별 모듈들을 등록합니다
-    // 각 모듈은 독립적인 기능 영역을 담당하며, 필요에 따라 서로 의존할 수 있습니다.
-    AuthModule,      // 인증 관련 기능
-    UsersModule,     // 사용자 관리 기능
-    ProductsModule,  // 상품 관리 기능
+    AuthModule,
+    UsersModule,
+    ProductsModule,
+    HealthModule,
   ],
   
-  // 루트 레벨의 컨트롤러와 서비스
-  // 보통은 헬스체크나 기본 정보 제공 용도로 사용됩니다.
   controllers: [AppController],
   providers: [AppService],
 })
 export class AppModule {
   /**
    * 모듈이 초기화될 때 실행되는 라이프사이클 훅입니다.
-   * 데이터베이스 연결 상태나 Redis 연결 상태를 확인하는 등의 
-   * 초기화 작업을 수행할 수 있습니다.
    */
   constructor(private configService: ConfigService) {
     console.log('🏗️  AppModule이 초기화되었습니다');
-    console.log(`📊 현재 환경: ${this.configService.get('NODE_ENV')}`);
+    console.log(`📊 현재 환경: ${this.configService.get('NODE_ENV', 'development')}`);
   }
 }

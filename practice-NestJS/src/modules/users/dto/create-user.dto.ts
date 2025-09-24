@@ -6,12 +6,19 @@ import {
   IsNotEmpty,
   Matches,
   IsOptional,
-  IsBoolean
+  IsBoolean,
+  IsEnum
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { UserRole } from '../../../common/types';
 
 /**
  * 사용자 생성 DTO입니다.
+ * 
+ * ✨ 최신 개선사항:
+ * - 공통 타입 시스템의 UserRole enum 활용
+ * - 타입 안전성과 코드 일관성 향상
+ * - 권한 관리 시스템과 완벽하게 통합
  * 
  * 이 DTO는 관리자가 새로운 사용자를 생성할 때 사용됩니다.
  * 일반적인 회원가입과는 달리, 관리자 권한으로 사용자를 직접 생성하는 경우에 활용됩니다.
@@ -95,19 +102,25 @@ export class CreateUserDto {
 
   /**
    * 사용자 역할입니다.
+   * 
+   * ✨ 개선사항: 공통 타입 시스템의 UserRole enum 사용
+   * - 타입 안전성 보장
+   * - 권한 관리 시스템과 완벽하게 통합
+   * - 중복 코드 제거
+   * 
    * 관리자는 다른 사용자의 역할을 자유롭게 설정할 수 있습니다.
    */
   @ApiPropertyOptional({
     description: '사용자 역할',
-    example: 'user',
-    enum: ['user', 'moderator', 'admin'],
-    default: 'user'
+    example: UserRole.USER,
+    enum: UserRole,
+    default: UserRole.USER
   })
   @IsOptional()
-  @Matches(/^(user|moderator|admin)$/, {
-    message: '역할은 user, moderator, admin 중 하나여야 합니다.'
+  @IsEnum(UserRole, {
+    message: `역할은 다음 중 하나여야 합니다: ${Object.values(UserRole).join(', ')}`
   })
-  role?: 'user' | 'moderator' | 'admin' = 'user';
+  role?: UserRole = UserRole.USER;
 
   /**
    * 계정 활성화 상태입니다.

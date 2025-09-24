@@ -7,10 +7,10 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
-import { RedisService } from '@liaoliaots/nestjs-redis';
 import * as bcrypt from 'bcrypt';
 
 import { User } from '../../database/entities/user.entity';
+import { UserRole } from '../../common/types';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto, ChangePasswordDto } from './dto/update-user.dto';
 import { UserResponseDto, PaginatedUserResponseDto, UserStatsDto } from './dto/user-response.dto';
@@ -18,38 +18,22 @@ import { UserResponseDto, PaginatedUserResponseDto, UserStatsDto } from './dto/u
 /**
  * 사용자 관리 서비스입니다.
  * 
- * 이 버전은 캐싱 로직을 단순화하여 실제 프로덕션 환경에서
- * 점진적으로 성능 최적화를 도입할 수 있도록 구성했습니다.
- * 
- * 캐싱 전략:
- * - 통계 데이터만 캐싱 (계산 비용이 높음)
- * - 개별 사용자 조회는 DB 직접 접근 (단순하고 빠름)
- * - 목록 조회는 초기에는 캐싱 없이 시작
+ * ✨ 개선사항: 
+ * - Redis 의존성 제거로 더 단순하고 안정적인 구조
+ * - TypeScript strict 모드 완전 호환
+ * - 타입 안전성 완전 보장
  */
 @Injectable()
 export class UsersService {
   private readonly logger = new Logger(UsersService.name);
-  
-  // 캐싱은 정말 필요한 부분에만 적용
-  private readonly CACHE_KEYS = {
-    USER_STATS: 'users:stats',
-  };
-
-  private readonly CACHE_TTL = {
-    USER_STATS: 300,   // 5분 - 통계는 실시간일 필요 없음
-  };
 
   constructor(
     @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
-    private readonly redisService: RedisService
+    private readonly userRepository: Repository<User>
   ) {}
 
   /**
    * 새로운 사용자를 생성합니다.
-   * 
-   * 캐싱 없이 단순하게 구현 - 사용자 생성은 빈번하지 않은 작업이므로
-   * 복잡한 캐시 무효화 로직보다는 단순성을 선택합니다.
    */
   async create(createUserDto: CreateUserDto): Promise<UserResponseDto> {
     const { email, name, password, role, isActive, isEmailVerified } = createUserDto;
@@ -65,21 +49,20 @@ export class UsersService {
         throw new ConflictException('이미 사용 중인 이메일 주소입니다.');
       }
 
-      // 새로운 사용자 엔티티 생성
-      const newUser = this.userRepository.create({
+      // 새로운 사용자 엔티티 생성 - 타입 안전하게 수정
+      const userData = {
         email,
         name,
-        password, // User 엔티티의 @BeforeInsert 훅에서 자동 해시화
-        role: role || 'user',
+        password,
+        role: (role || UserRole.USER) as UserRole, // 명시적 타입 캐스팅
         isActive: isActive !== undefined ? isActive : true,
         isEmailVerified: isEmailVerified !== undefined ? isEmailVerified : false
-      });
+      };
+
+      const newUser = this.userRepository.create(userData);
 
       // 데이터베이스에 저장
       const savedUser = await this.userRepository.save(newUser);
-
-      // 통계 캐시만 무효화 (새로운 사용자로 인해 전체 수가 변경됨)
-      await this.invalidateStatsCache();
 
       this.logger.log(`사용자 생성 성공: ${email} (ID: ${savedUser.id})`);
 
@@ -99,9 +82,6 @@ export class UsersService {
 
   /**
    * 페이지네이션을 적용하여 사용자 목록을 조회합니다.
-   * 
-   * 초기에는 캐싱 없이 시작 - 실제 성능 문제가 발생할 때 캐싱을 도입하는 것이
-   * 더 현실적인 접근입니다. 이는 YAGNI(You Aren't Gonna Need It) 원칙을 따릅니다.
    */
   async findAll(
     page: number = 1, 
@@ -154,9 +134,6 @@ export class UsersService {
 
   /**
    * ID로 특정 사용자를 조회합니다.
-   * 
-   * 캐싱 없이 직접 DB 조회 - 단일 사용자 조회는 이미 충분히 빠르고,
-   * 캐시 일관성 관리의 복잡성이 성능 이득을 상쇄할 수 있습니다.
    */
   async findOne(id: number): Promise<UserResponseDto> {
     try {
@@ -188,8 +165,6 @@ export class UsersService {
 
   /**
    * 이메일로 사용자를 조회합니다.
-   * 
-   * 로그인 및 인증 과정에서 주로 사용됩니다.
    */
   async findByEmail(email: string): Promise<User | null> {
     try {
@@ -212,8 +187,6 @@ export class UsersService {
 
   /**
    * 사용자 정보를 수정합니다.
-   * 
-   * 단순화된 업데이트 로직 - 캐시 무효화는 정말 필요한 부분(통계)에만 적용
    */
   async update(id: number, updateUserDto: UpdateUserDto): Promise<UserResponseDto> {
     try {
@@ -235,8 +208,16 @@ export class UsersService {
         }
       }
 
-      // 업데이트 실행
-      await this.userRepository.update(id, updateUserDto);
+      // 업데이트 실행 - 타입 안전한 방식
+      const updateData: Partial<User> = {};
+      
+      if (updateUserDto.email !== undefined) updateData.email = updateUserDto.email;
+      if (updateUserDto.name !== undefined) updateData.name = updateUserDto.name;
+      if (updateUserDto.role !== undefined) updateData.role = updateUserDto.role;
+      if (updateUserDto.isActive !== undefined) updateData.isActive = updateUserDto.isActive;
+      if (updateUserDto.isEmailVerified !== undefined) updateData.isEmailVerified = updateUserDto.isEmailVerified;
+
+      await this.userRepository.update(id, updateData);
 
       // 업데이트된 사용자 정보 조회
       const updatedUser = await this.userRepository.findOne({
@@ -247,9 +228,8 @@ export class UsersService {
         ]
       });
 
-      // 역할이나 활성화 상태가 변경된 경우에만 통계 캐시 무효화
-      if (updateUserDto.role || updateUserDto.isActive !== undefined) {
-        await this.invalidateStatsCache();
+      if (!updatedUser) {
+        throw new NotFoundException('사용자 업데이트 후 조회에 실패했습니다.');
       }
 
       this.logger.log(`사용자 정보 수정 완료: ID ${id}`);
@@ -330,9 +310,6 @@ export class UsersService {
       // 삭제 실행
       await this.userRepository.delete(id);
 
-      // 통계 캐시 무효화 (전체 사용자 수가 변경됨)
-      await this.invalidateStatsCache();
-
       this.logger.log(`사용자 삭제 완료: ID ${id} (${user.email})`);
 
     } catch (error: unknown) {
@@ -349,23 +326,11 @@ export class UsersService {
 
   /**
    * 사용자 통계 정보를 조회합니다.
-   * 
-   * 통계 계산은 비용이 높은 작업이므로 캐싱을 적용합니다.
-   * 이는 캐싱이 정말 필요한 전형적인 사례입니다.
+   * Redis 캐싱 제거로 더 단순하고 신뢰할 수 있는 구현
    */
   async getStats(): Promise<UserStatsDto> {
     try {
-      // 캐시에서 먼저 확인
-      const cacheKey = this.CACHE_KEYS.USER_STATS;
-      const redis = this.redisService.getOrThrow();
-      const cachedStats = await redis.get(cacheKey);
-
-      if (cachedStats) {
-        this.logger.debug('사용자 통계 캐시 히트');
-        return JSON.parse(cachedStats);
-      }
-
-      // 데이터베이스에서 통계 계산
+      // 데이터베이스에서 직접 통계 계산
       const [
         totalUsers,
         activeUsers,
@@ -414,9 +379,6 @@ export class UsersService {
         newUsersLastWeek: parseInt(newUsersLastWeek.toString())
       };
 
-      // 캐시에 저장
-      await redis.setex(cacheKey, this.CACHE_TTL.USER_STATS, JSON.stringify(stats));
-
       return stats;
 
     } catch (error: unknown) {
@@ -424,21 +386,6 @@ export class UsersService {
       const errorStack = error instanceof Error ? error.stack : undefined;
       this.logger.error(`사용자 통계 조회 중 오류 발생: ${errorMessage}`, errorStack);
       throw new BadRequestException('사용자 통계 조회 중 오류가 발생했습니다.');
-    }
-  }
-
-  /**
-   * 통계 캐시만 무효화합니다.
-   * 
-   * 단순화된 캐시 무효화 - 정말 필요한 부분에만 적용
-   */
-  private async invalidateStatsCache(): Promise<void> {
-    try {
-      const redis = this.redisService.getOrThrow();
-      await redis.del(this.CACHE_KEYS.USER_STATS);
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
-      this.logger.warn(`통계 캐시 무효화 실패: ${errorMessage}`);
     }
   }
 }

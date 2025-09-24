@@ -9,9 +9,15 @@ import {
   Index
 } from 'typeorm';
 import * as bcrypt from 'bcrypt';
+import { UserRole } from '../../common/types';
 
 /**
  * User 엔티티 - 사용자 정보를 저장하는 데이터베이스 테이블의 구조를 정의합니다.
+ * 
+ * ✨ 최신 개선사항:
+ * - 공통 타입 시스템 도입으로 UserRole enum을 import 사용
+ * - 타입 안전성과 코드 일관성 향상
+ * - 권한 관리 시스템과 완벽하게 통합
  * 
  * 이 클래스는 마치 사람의 신분증과 같은 역할을 합니다.
  * 각 사용자의 기본 정보를 체계적으로 저장하고 관리할 수 있게 해줍니다.
@@ -72,16 +78,21 @@ export class User {
   /**
    * 사용자의 역할을 나타냅니다.
    * 
+   * 🎯 개선사항: 공통 타입 시스템의 UserRole enum을 사용
+   * - 권한 관리 시스템(@Roles 데코레이터)과 완벽하게 통합
+   * - 타입 안전성 보장 및 중복 코드 제거
+   * - 단일 진실 원천(Single Source of Truth) 구현
+   * 
    * enum을 사용하여 허용된 값들만 저장할 수 있도록 제한합니다.
    * 기본값은 'user'로 설정하여 일반 사용자로 시작하게 합니다.
    */
   @Column({
     type: 'enum',
-    enum: ['user', 'admin', 'moderator'],
-    default: 'user',
+    enum: UserRole,
+    default: UserRole.USER,
     comment: '사용자 권한 레벨'
   })
-  role!: 'user' | 'admin' | 'moderator';
+  role!: UserRole;
 
   /**
    * 계정 활성화 상태입니다.

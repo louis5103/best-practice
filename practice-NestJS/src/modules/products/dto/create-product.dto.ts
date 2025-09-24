@@ -16,64 +16,28 @@ import {
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type, Transform } from 'class-transformer';
-
-/**
- * 상품 카테고리 열거형입니다.
- * 
- * 실무에서는 카테고리를 자유 텍스트로 받기보다는 미리 정의된 값들 중에서
- * 선택하게 하는 것이 데이터 일관성 측면에서 더 좋습니다.
- * 이는 마치 드롭다운 메뉴에서 선택하는 것과 같은 개념입니다.
- * 
- * 장점:
- * 1. 데이터 일관성 보장 (오타나 표기법 차이 방지)
- * 2. 카테고리별 통계 집계가 정확해짐
- * 3. 필터링 기능 구현이 용이해짐
- * 4. API 문서에서 가능한 값들이 명확히 표시됨
- */
-export enum ProductCategory {
-  ELECTRONICS = 'electronics',
-  CLOTHING = 'clothing', 
-  ACCESSORIES = 'accessories',
-  HOME = 'home',
-  SPORTS = 'sports',
-  BOOKS = 'books',
-  BEAUTY = 'beauty',
-  FOOD = 'food',
-  OTHER = 'other'
-}
-
-/**
- * 상품 상태 열거형입니다.
- * 
- * 단순한 boolean isActive보다 더 세밀한 상품 상태 관리를 위해 사용합니다.
- * 이는 실제 쇼핑몰에서 '품절', '일시중단', '판매중' 등의 상태를 구분하는 것과 같습니다.
- * 
- * 각 상태의 의미:
- * - DRAFT: 아직 공개되지 않은 초안 상태
- * - ACTIVE: 정상적으로 판매 중인 상태
- * - OUT_OF_STOCK: 재고가 없어서 일시적으로 구매 불가
- * - DISCONTINUED: 영구적으로 판매 중단된 상태
- */
-export enum ProductStatus {
-  DRAFT = 'draft',
-  ACTIVE = 'active',
-  OUT_OF_STOCK = 'out_of_stock',
-  DISCONTINUED = 'discontinued'
-}
+import { ProductCategory, ProductStatus } from '../../../common/types';
 
 /**
  * 개선된 상품 생성 DTO입니다.
  * 
+ * ✨ 최신 개선사항:
+ * - 공통 타입 시스템 도입으로 ProductCategory, ProductStatus를 import 사용
+ * - 엔티티와 100% 일치하는 필드 구조로 데이터 일관성 보장
+ * - 중복된 enum 정의 제거로 Single Source of Truth 구현
+ * - 타입 안전성과 코드 유지보수성 대폭 향상
+ * 
  * 이 DTO는 이전 대화창에서 발굴한 고급 버전으로, 실제 쇼핑몰에서 필요한
  * 모든 비즈니스 로직과 검증 규칙을 포함하고 있습니다.
  * 
- * 주요 개선사항:
- * 1. 열거형을 통한 데이터 일관성 보장
- * 2. 정규표현식을 활용한 세밀한 검증
- * 3. 비즈니스 규칙의 코드 구현 (할인가 검증 등)
- * 4. 다중 이미지 지원
- * 5. 태그 시스템 도입
- * 6. 더 현실적인 제약 조건들
+ * 🎯 주요 특징:
+ * 1. 🔧 공통 타입 시스템으로 엔티티와 완벽 동기화
+ * 2. 🏷️ 열거형을 통한 데이터 일관성 보장
+ * 3. 📝 정귀표현식을 활용한 세밀한 검증
+ * 4. 📈 비즈니스 규칙의 코드 구현 (할인가 검증 등)
+ * 5. 📦 다중 이미지 지원
+ * 6. 🏷️ 태그 시스템 도입
+ * 7. 📊 더 현실적인 제약 조건들
  */
 export class CreateProductDto {
   /**

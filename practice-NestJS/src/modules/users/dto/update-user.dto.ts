@@ -6,29 +6,25 @@ import {
   IsOptional,
   Matches,
   IsBoolean,
-  IsEmail
+  IsEmail,
+  IsEnum
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { CreateUserDto } from './create-user.dto';
+import { UserRole } from '../../../common/types';
 
 /**
  * 사용자 정보 수정 DTO입니다.
  * 
- * 이 DTO는 기존 사용자의 정보를 부분적으로 수정할 때 사용됩니다.
- * PartialType을 사용하여 CreateUserDto의 모든 필드를 선택사항으로 만들고,
- * OmitType을 사용하여 수정할 수 없는 필드(비밀번호)는 제외합니다.
- * 
- * 이는 마치 신분증 정정 신청서와 같은 개념입니다.
- * 모든 정보를 다시 작성할 필요 없이 변경하고 싶은 부분만 작성하면 됩니다.
+ * ✨ 개선사항: 공통 타입 시스템을 활용한 타입 안전성 보장
+ * - UserRole enum 활용으로 CreateUserDto와 완벽한 호환성 확보
+ * - TypeScript strict 모드 완전 호환
  */
 export class UpdateUserDto extends PartialType(
   OmitType(CreateUserDto, ['password'] as const)
 ) {
   /**
    * 사용자 이메일 주소입니다.
-   * 
-   * 이메일 변경은 신중해야 하므로 별도의 검증 로직이 필요할 수 있습니다.
-   * (예: 새 이메일로 인증 메일 발송 등)
    */
   @ApiPropertyOptional({
     description: '변경할 이메일 주소',
@@ -67,23 +63,22 @@ export class UpdateUserDto extends PartialType(
 
   /**
    * 사용자 역할입니다.
-   * 일반 사용자는 자신의 역할을 변경할 수 없으며,
-   * 관리자만 다른 사용자의 역할을 변경할 수 있습니다.
+   * 
+   * ✨ 개선사항: UserRole enum을 사용하여 타입 안전성과 일관성 보장
    */
   @ApiPropertyOptional({
     description: '변경할 사용자 역할 (관리자만 수정 가능)',
-    example: 'moderator',
-    enum: ['user', 'moderator', 'admin']
+    example: UserRole.MODERATOR,
+    enum: UserRole
   })
   @IsOptional()
-  @Matches(/^(user|moderator|admin)$/, {
-    message: '역할은 user, moderator, admin 중 하나여야 합니다.'
+  @IsEnum(UserRole, {
+    message: `역할은 다음 중 하나여야 합니다: ${Object.values(UserRole).join(', ')}`
   })
-  role?: 'user' | 'moderator' | 'admin';
+  role?: UserRole;
 
   /**
    * 계정 활성화 상태입니다.
-   * 관리자가 사용자 계정을 활성화/비활성화할 때 사용합니다.
    */
   @ApiPropertyOptional({
     description: '계정 활성화 상태 (관리자만 수정 가능)',
@@ -97,7 +92,6 @@ export class UpdateUserDto extends PartialType(
 
   /**
    * 이메일 인증 상태입니다.
-   * 관리자가 사용자의 이메일 인증 상태를 수동으로 변경할 때 사용합니다.
    */
   @ApiPropertyOptional({
     description: '이메일 인증 완료 여부 (관리자만 수정 가능)',
@@ -113,13 +107,11 @@ export class UpdateUserDto extends PartialType(
 /**
  * 비밀번호 변경 전용 DTO입니다.
  * 
- * 보안상 비밀번호 변경은 별도의 엔드포인트와 DTO를 사용하는 것이 좋습니다.
- * 현재 비밀번호 확인 과정을 포함하여 더 안전한 비밀번호 변경 프로세스를 제공합니다.
+ * 보안상 비밀번호 변경은 별도의 엔드포인트와 DTO를 사용합니다.
  */
 export class ChangePasswordDto {
   /**
    * 현재 비밀번호입니다.
-   * 비밀번호 변경 시 본인 확인을 위해 필요합니다.
    */
   @ApiPropertyOptional({
     description: '현재 비밀번호 (본인 확인용)',
