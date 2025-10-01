@@ -15,15 +15,15 @@ import { User } from '../../database/entities/user.entity';
 
 /**
  * 인증 서비스입니다.
- * 
+ *
  * 이 서비스는 마치 은행의 계좌 담당자와 같은 역할을 합니다.
  * 고객(사용자)이 계좌 개설(회원가입), 신원 확인(로그인), 계좌 해지(로그아웃) 등의
  * 요청을 할 때 필요한 모든 업무를 처리하는 핵심 서비스입니다.
- * 
+ *
  * Spring Boot의 Service 클래스와 동일한 개념으로,
  * 컨트롤러에서 받은 요청을 실제 비즈니스 로직으로 처리하고,
  * 데이터베이스와 상호작용하며, 결과를 반환하는 역할을 담당합니다.
- * 
+ *
  * 이 서비스에서 처리하는 주요 기능들:
  * - 사용자 회원가입 (비밀번호 해시화, 중복 확인)
  * - 사용자 로그인 (비밀번호 검증, JWT 토큰 발급)
@@ -33,7 +33,7 @@ import { User } from '../../database/entities/user.entity';
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
-  
+
   // Redis 클라이언트를 미리 가져와서 성능을 향상시킵니다.
   // 매번 getOrThrow()를 호출하는 것보다 효율적입니다.
   private readonly redis = this.redisService.getOrThrow();
@@ -48,7 +48,7 @@ export class AuthService {
 
   /**
    * 새로운 사용자를 등록합니다.
-   * 
+   *
    * 이 메서드는 마치 은행에서 새 계좌를 개설하는 과정과 같습니다.
    * 고객의 신원을 확인하고, 중복된 계좌가 없는지 체크하며,
    * 모든 절차가 완료되면 계좌(사용자 계정)을 생성합니다.
@@ -109,7 +109,7 @@ export class AuthService {
       if (error instanceof ConflictException) {
         throw error;
       }
-      
+
       const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
       const errorStack = error instanceof Error ? error.stack : undefined;
       this.logger.error(`회원가입 중 오류 발생: ${errorMessage}`, errorStack);
@@ -119,7 +119,7 @@ export class AuthService {
 
   /**
    * 사용자 로그인을 처리합니다.
-   * 
+   *
    * 이 메서드는 마치 은행에서 본인 확인을 하는 과정과 같습니다.
    * 신분증(이메일)과 서명(비밀번호)을 확인해서
    * 본인이 맞으면 거래(서비스 이용) 권한을 부여합니다.
@@ -152,7 +152,7 @@ export class AuthService {
       // bcrypt.compare를 사용해서 평문 비밀번호와 해시된 비밀번호를 비교합니다.
       // 이 함수는 내부적으로 동일한 salt를 사용해서 해시를 만들어 비교합니다.
       const isPasswordValid = await bcrypt.compare(password, user.password);
-      
+
       if (!isPasswordValid) {
         this.logger.warn(`로그인 실패 - 잘못된 비밀번호: ${email}`);
         throw new UnauthorizedException('이메일 또는 비밀번호가 올바르지 않습니다.');
@@ -180,7 +180,7 @@ export class AuthService {
       if (error instanceof UnauthorizedException) {
         throw error;
       }
-      
+
       const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
       const errorStack = error instanceof Error ? error.stack : undefined;
       this.logger.error(`로그인 중 오류 발생: ${errorMessage}`, errorStack);
@@ -190,7 +190,7 @@ export class AuthService {
 
   /**
    * 사용자 로그아웃을 처리합니다.
-   * 
+   *
    * JWT는 기본적으로 stateless하므로 서버에서 토큰을 무효화할 방법이 없습니다.
    * 하지만 보안상 로그아웃 시 토큰을 즉시 무효화해야 하는 경우가 있으므로,
    * Redis를 활용한 토큰 블랙리스트 방식을 사용합니다.
@@ -199,12 +199,12 @@ export class AuthService {
     try {
       // JWT 토큰을 디코드해서 만료 시간을 확인합니다.
       const decoded = this.jwtService.decode(token) as any;
-      
+
       if (decoded && decoded.exp) {
         // 토큰의 남은 수명만큼 Redis에 저장합니다.
         // 토큰이 만료되면 자동으로 Redis에서도 삭제됩니다.
         const ttl = decoded.exp - Math.floor(Date.now() / 1000);
-        
+
         if (ttl > 0) {
           await this.redis.setex(`blacklist:${token}`, ttl, '1');
           this.logger.log('토큰이 블랙리스트에 추가되었습니다.');
@@ -224,7 +224,7 @@ export class AuthService {
 
   /**
    * JWT 토큰을 생성합니다.
-   * 
+   *
    * 이 메서드는 사용자의 신원을 디지털 서명이 담긴 토큰으로 변환하는 과정입니다.
    * 마치 은행에서 거래 시 사용할 수 있는 임시 증명서를 발급하는 것과 같습니다.
    */
@@ -245,7 +245,7 @@ export class AuthService {
 
   /**
    * 현재 로그인한 사용자의 정보를 조회합니다.
-   * 
+   *
    * 이 메서드는 JWT Guard를 통과한 요청에서 사용자 정보를 반환합니다.
    * 프론트엔드에서 "내 정보" 페이지를 구성할 때 유용합니다.
    */
@@ -262,6 +262,7 @@ export class AuthService {
       // 비밀번호는 절대 반환하지 않습니다.
       const { password, ...userWithoutPassword } = user;
       return userWithoutPassword;
+
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
       const errorStack = error instanceof Error ? error.stack : undefined;
